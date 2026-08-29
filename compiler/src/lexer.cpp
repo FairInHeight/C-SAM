@@ -1,6 +1,8 @@
 #include "lexer.hpp"
+#include "debug.hpp"
 
 #include <cctype>
+#include <iostream>
 #include <stdexcept>
 
 Lexer::Lexer(const std::string& source)
@@ -10,6 +12,10 @@ Lexer::Lexer(const std::string& source)
 
 std::vector<Token> Lexer::tokenize()
 {
+    if (csam_debug) {
+        std::cout << "Lexer: Tokenizing source\n";
+    }
+
     std::vector<Token> tokens;
 
     std::size_t position = 0;
@@ -19,7 +25,6 @@ std::vector<Token> Lexer::tokenize()
     while (position < source.size()) {
         char current = source[position];
 
-        // Whitespace
         if (std::isspace(static_cast<unsigned char>(current))) {
             if (current == '\n') {
                 ++line;
@@ -32,7 +37,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // Single-line comment
         if (current == '/' &&
             position + 1 < source.size() &&
             source[position + 1] == '/') {
@@ -48,7 +52,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // Multi-line comment
         if (current == '/' &&
             position + 1 < source.size() &&
             source[position + 1] == '*') {
@@ -79,7 +82,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // Identifier
         if (std::isalpha(static_cast<unsigned char>(current)) ||
             current == '_') {
 
@@ -105,7 +107,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // Number
         if (std::isdigit(static_cast<unsigned char>(current))) {
             std::size_t start = position;
             std::size_t startColumn = column;
@@ -128,7 +129,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // String
         if (current == '"') {
             std::size_t start = position;
             std::size_t startLine = line;
@@ -165,7 +165,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // Hash token
         if (current == '#') {
             std::size_t start = position;
             std::size_t startColumn = column;
@@ -192,7 +191,6 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        // Single-character tokens
         TokenType type;
 
         switch (current) {
@@ -246,6 +244,10 @@ std::vector<Token> Lexer::tokenize()
         line,
         column
     });
+
+    if (csam_debug) {
+        std::cout << "Lexer: Finished tokenizing source\n";
+    }
 
     return tokens;
 }
