@@ -76,10 +76,75 @@ void Parser::parse_root()
         "Expected '{' after root:"
     );
 
-    // Root contents will be implemented next.
+    while (!check(TokenType::RightBrace)) {
+        if (check(TokenType::Identifier) && peek().value == "var") {
+            parse_variable();
+            continue;
+        }
+
+        const Token& token = peek();
+
+        throw std::runtime_error(
+            "Unexpected token '" +
+            token.value +
+            "' in root at line " +
+            std::to_string(token.line) +
+            ", column " +
+            std::to_string(token.column)
+        );
+    }
 
     consume(
         TokenType::RightBrace,
         "Expected '}' after root block"
+    );
+}
+
+void Parser::parse_variable()
+{
+    const Token& var = consume(
+        TokenType::Identifier,
+        "Expected 'var'"
+    );
+
+    if (var.value != "var") {
+        throw std::runtime_error(
+            "Expected 'var' at line " +
+            std::to_string(var.line) +
+            ", column " +
+            std::to_string(var.column)
+        );
+    }
+
+    consume(
+        TokenType::Identifier,
+        "Expected variable name"
+    );
+
+    consume(
+        TokenType::Equals,
+        "Expected '=' after variable name"
+    );
+
+    if (!check(TokenType::String) &&
+        !check(TokenType::Number) &&
+        !check(TokenType::Hash) &&
+        !check(TokenType::Identifier)) {
+
+        const Token& token = peek();
+
+        throw std::runtime_error(
+            "Expected value after '=' at line " +
+            std::to_string(token.line) +
+            ", column " +
+            std::to_string(token.column)
+        );
+    }
+
+    advance();
+
+    consume(
+        TokenType::Semicolon,
+        "Expected ';' after variable declaration"
     );
 }
