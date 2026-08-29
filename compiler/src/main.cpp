@@ -1,3 +1,4 @@
+#include "debug.hpp"
 #include "lexer.hpp"
 
 #include <fstream>
@@ -21,17 +22,19 @@ int main()
     Lexer lexer(source);
     std::vector<Token> tokens = lexer.tokenize();
 
-    for (const Token& token : tokens) {
-        std::cout
-            << token.line << ":"
-            << token.column << " "
-            << token_type_name(token.type);
+    if (csam_debug) {
+        for (const Token& token : tokens) {
+            std::cout
+                << token.line << ":"
+                << token.column << " "
+                << token_type_name(token.type);
 
-        if (!token.value.empty()) {
-            std::cout << " \"" << token.value << "\"";
+            if (!token.value.empty()) {
+                std::cout << " \"" << token.value << "\"";
+            }
+
+            std::cout << '\n';
         }
-
-        std::cout << '\n';
     }
 
     return 0;
