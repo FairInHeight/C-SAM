@@ -5,15 +5,15 @@
 #include <iostream>
 #include <stdexcept>
 
-Lexer::Lexer(const std::string& source)
-    : source(source)
+Lexer::Lexer(const std::string& source, const std::string& filepath)
+    : source(source), filepath(filepath)
 {
 }
 
 std::vector<Token> Lexer::tokenize()
 {
     if (csam_debug) {
-        std::cout << "Lexer: Tokenizing source\n";
+        std::cout << "Lexer: Tokenizing " << filepath << '\n';
     }
 
     std::vector<Token> tokens;
@@ -37,10 +37,7 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        if (current == '/' &&
-            position + 1 < source.size() &&
-            source[position + 1] == '/') {
-
+        if (current == '/' && position + 1 < source.size() && source[position + 1] == '/') {
             position += 2;
             column += 2;
 
@@ -52,18 +49,12 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        if (current == '/' &&
-            position + 1 < source.size() &&
-            source[position + 1] == '*') {
-
+        if (current == '/' && position + 1 < source.size() && source[position + 1] == '*') {
             position += 2;
             column += 2;
 
             while (position < source.size()) {
-                if (source[position] == '*' &&
-                    position + 1 < source.size() &&
-                    source[position + 1] == '/') {
-
+                if (source[position] == '*' && position + 1 < source.size() && source[position + 1] == '/') {
                     position += 2;
                     column += 2;
                     break;
@@ -82,17 +73,13 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
-        if (std::isalpha(static_cast<unsigned char>(current)) ||
-            current == '_') {
-
+        if (std::isalpha(static_cast<unsigned char>(current)) || current == '_') {
             std::size_t start = position;
             std::size_t startColumn = column;
 
             while (position < source.size() &&
                    (std::isalnum(static_cast<unsigned char>(source[position])) ||
-                    source[position] == '_' ||
-                    source[position] == '-')) {
-
+                    source[position] == '_' || source[position] == '-')) {
                 ++position;
                 ++column;
             }
@@ -112,9 +99,7 @@ std::vector<Token> Lexer::tokenize()
             std::size_t startColumn = column;
 
             while (position < source.size() &&
-                   (std::isdigit(static_cast<unsigned char>(source[position])) ||
-                    source[position] == '.')) {
-
+                   (std::isdigit(static_cast<unsigned char>(source[position])) || source[position] == '.')) {
                 ++position;
                 ++column;
             }
@@ -174,9 +159,7 @@ std::vector<Token> Lexer::tokenize()
 
             while (position < source.size() &&
                    (std::isalnum(static_cast<unsigned char>(source[position])) ||
-                    source[position] == '_' ||
-                    source[position] == '-')) {
-
+                    source[position] == '_' || source[position] == '-')) {
                 ++position;
                 ++column;
             }
@@ -194,30 +177,12 @@ std::vector<Token> Lexer::tokenize()
         TokenType type;
 
         switch (current) {
-            case ':':
-                type = TokenType::Colon;
-                break;
-
-            case ';':
-                type = TokenType::Semicolon;
-                break;
-
-            case '{':
-                type = TokenType::LeftBrace;
-                break;
-
-            case '}':
-                type = TokenType::RightBrace;
-                break;
-
-            case '=':
-                type = TokenType::Equals;
-                break;
-
-            case ',':
-                type = TokenType::Comma;
-                break;
-
+            case ':': type = TokenType::Colon; break;
+            case ';': type = TokenType::Semicolon; break;
+            case '{': type = TokenType::LeftBrace; break;
+            case '}': type = TokenType::RightBrace; break;
+            case '=': type = TokenType::Equals; break;
+            case ',': type = TokenType::Comma; break;
             default:
                 throw std::runtime_error(
                     "Unexpected character at line " +
@@ -246,7 +211,7 @@ std::vector<Token> Lexer::tokenize()
     });
 
     if (csam_debug) {
-        std::cout << "Lexer: Finished tokenizing source\n";
+        std::cout << "Lexer: Finished tokenizing " << filepath << '\n';
     }
 
     return tokens;
