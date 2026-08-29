@@ -9,7 +9,7 @@ namespace {
 
 void print_syntax(const char* program)
 {
-    std::cerr << "Syntax: " << program << " -[flags] <filepath>\n";
+    std::cerr << "Syntax: " << program << " [-flags] <filepath>\n";
 }
 
 void print_valid_flags()
@@ -22,28 +22,40 @@ void print_valid_flags()
 
 Arguments parse_arguments(int argc, char* argv[])
 {
-    if (argc < 3 || argc > 3) {
+    if (argc < 2 || argc > 3) {
         print_syntax(argv[0]);
         throw std::runtime_error("invalid argument count");
     }
 
-    const std::string flags = argv[1];
+    Arguments arguments;
+    const std::string first_argument = argv[1];
 
-    if (flags.empty() || flags[0] != '-') {
-        print_syntax(argv[0]);
-        throw std::runtime_error("invalid flag syntax");
+    // No flag: argv[1] is the filepath.
+    if (first_argument.empty() || first_argument[0] != '-') {
+        if (argc != 2) {
+            print_syntax(argv[0]);
+            throw std::runtime_error("invalid argument count");
+        }
+
+        arguments.filepath = first_argument;
+        csam_debug = false;
+        return arguments;
     }
 
-    Arguments arguments;
+    // Flag mode: argv[1] contains flags and argv[2] is the filepath.
+    if (argc != 3) {
+        print_syntax(argv[0]);
+        throw std::runtime_error("missing filepath");
+    }
 
-    for (std::size_t i = 1; i < flags.size(); ++i) {
-        switch (flags[i]) {
+    for (std::size_t i = 1; i < first_argument.size(); ++i) {
+        switch (first_argument[i]) {
             case 'd':
                 arguments.debug = true;
                 break;
 
             default:
-                std::cerr << "Invalid flag: -" << flags[i] << '\n';
+                std::cerr << "Invalid flag: -" << first_argument[i] << '\n';
                 print_valid_flags();
                 throw std::invalid_argument("invalid flag");
         }
