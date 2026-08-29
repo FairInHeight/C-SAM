@@ -20,8 +20,9 @@ private:
     const Token& advance();
     bool check(TokenType type) const;
     const Token& consume(TokenType type, const char* message);
-    
+
     void parse_root();
+    void parse_variable();
 };
 
 #endif
