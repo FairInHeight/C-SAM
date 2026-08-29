@@ -212,6 +212,10 @@ std::vector<Token> Lexer::tokenize()
                 type = TokenType::RightBrace;
                 break;
 
+            case '=':
+                type = TokenType::Equals;
+                break;
+
             case ',':
                 type = TokenType::Comma;
                 break;
