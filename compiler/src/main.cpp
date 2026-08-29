@@ -37,6 +37,7 @@ int main(int argc, char* argv[])
         if (csam_debug) {
             for (const Token& token : tokens) {
                 std::cout
+                    << token.filepath << ":"
                     << token.line << ":"
                     << token.column << " "
                     << token_type_name(token.type);
