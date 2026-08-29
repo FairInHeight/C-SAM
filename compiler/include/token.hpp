@@ -43,6 +43,7 @@ inline const char* token_type_name(TokenType type)
 struct Token {
     TokenType type;
     std::string value;
+    std::string filepath;
     std::size_t line;
     std::size_t column;
 };
