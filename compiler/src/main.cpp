@@ -24,53 +24,8 @@ int main()
     for (const Token& token : tokens) {
         std::cout
             << token.line << ":"
-            << token.column << " ";
-
-        switch (token.type) {
-            case TokenType::Identifier:
-                std::cout << "Identifier";
-                break;
-
-            case TokenType::String:
-                std::cout << "String";
-                break;
-
-            case TokenType::Number:
-                std::cout << "Number";
-                break;
-
-            case TokenType::Colon:
-                std::cout << "Colon";
-                break;
-
-            case TokenType::Semicolon:
-                std::cout << "Semicolon";
-                break;
-
-            case TokenType::LeftBrace:
-                std::cout << "LeftBrace";
-                break;
-
-            case TokenType::RightBrace:
-                std::cout << "RightBrace";
-                break;
-
-            case TokenType::Hash:
-                std::cout << "Hash";
-                break;
-
-            case TokenType::Comma:
-                std::cout << "Comma";
-                break;
-
-            case TokenType::Equals:
-                std::cout << "Equals";
-                break;
-
-            case TokenType::EndOfFile:
-                std::cout << "EndOfFile";
-                break;
-        }
+            << token.column << " "
+            << token_type_name(token.type);
 
         if (!token.value.empty()) {
             std::cout << " \"" << token.value << "\"";
