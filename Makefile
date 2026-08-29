@@ -1,9 +1,9 @@
 CXX = g++
-CXXFLAGS = -std=c++23 -Wall -Wextra -pedantic
+CXXFLAGS = -std=c++23 -Wall -Wextra -pedantic -Icompiler/include
 
 TARGET = csam
 
-SRC = compiler/src/main.cpp
+SRC = $(wildcard compiler/src/*.cpp)
 
 $(TARGET): $(SRC)
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
