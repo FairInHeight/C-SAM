@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
         std::string source = buffer.str();
 
-        Lexer lexer(source);
+        Lexer lexer(source, filepath);
         std::vector<Token> tokens = lexer.tokenize();
 
         if (csam_debug) {
