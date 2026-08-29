@@ -18,33 +18,35 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    std::ifstream file(arguments.filepath);
+    for (const std::string& filepath : arguments.filepaths) {
+        std::ifstream file(filepath);
 
-    if (!file) {
-        std::cerr << "Could not open " << arguments.filepath << '\n';
-        return 1;
-    }
+        if (!file) {
+            std::cerr << "Could not open " << filepath << '\n';
+            return 1;
+        }
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
+        std::stringstream buffer;
+        buffer << file.rdbuf();
 
-    std::string source = buffer.str();
+        std::string source = buffer.str();
 
-    Lexer lexer(source);
-    std::vector<Token> tokens = lexer.tokenize();
+        Lexer lexer(source);
+        std::vector<Token> tokens = lexer.tokenize();
 
-    if (csam_debug) {
-        for (const Token& token : tokens) {
-            std::cout
-                << token.line << ":"
-                << token.column << " "
-                << token_type_name(token.type);
+        if (csam_debug) {
+            for (const Token& token : tokens) {
+                std::cout
+                    << token.line << ":"
+                    << token.column << " "
+                    << token_type_name(token.type);
 
-            if (!token.value.empty()) {
-                std::cout << " \"" << token.value << "\"";
+                if (!token.value.empty()) {
+                    std::cout << " \"" << token.value << "\"";
+                }
+
+                std::cout << '\n';
             }
-
-            std::cout << '\n';
         }
     }
 
