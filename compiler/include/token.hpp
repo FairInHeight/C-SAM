@@ -13,6 +13,7 @@ enum class TokenType {
     Semicolon,
     LeftBrace,
     RightBrace,
+    Equals,
 
     Hash,
     Comma,
