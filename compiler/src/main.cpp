@@ -1,6 +1,7 @@
 #include "args.hpp"
 #include "debug.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -49,6 +50,9 @@ int main(int argc, char* argv[])
                 std::cout << '\n';
             }
         }
+
+        Parser parser(tokens);
+        parser.parse();
     }
 
     return 0;
