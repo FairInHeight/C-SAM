@@ -1,8 +1,8 @@
 #ifndef CSAM_TOKEN_HPP
 #define CSAM_TOKEN_HPP
 
-#include <string>
 #include <cstddef>
+#include <string>
 
 enum class TokenType {
     Identifier,
@@ -13,6 +13,9 @@ enum class TokenType {
     Semicolon,
     LeftBrace,
     RightBrace,
+
+    Hash,
+    Comma,
 
     EndOfFile
 };
