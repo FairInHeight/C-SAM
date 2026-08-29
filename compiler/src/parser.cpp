@@ -1,5 +1,7 @@
 #include "parser.hpp"
+#include "debug.hpp"
 
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -42,6 +44,10 @@ const Token& Parser::consume(TokenType type, const char* message)
 
 void Parser::parse()
 {
+    if (csam_debug) {
+        std::cout << "Parser: Parsing source\n";
+    }
+
     parse_root();
 
     consume(
@@ -52,6 +58,10 @@ void Parser::parse()
 
 void Parser::parse_root()
 {
+    if (csam_debug) {
+        std::cout << "Parser: Parsing root\n";
+    }
+
     const Token& root = consume(
         TokenType::Identifier,
         "Expected 'root'"
@@ -102,6 +112,10 @@ void Parser::parse_root()
 
 void Parser::parse_variable()
 {
+    if (csam_debug) {
+        std::cout << "Parser: Parsing variable declaration\n";
+    }
+
     const Token& var = consume(
         TokenType::Identifier,
         "Expected 'var'"
