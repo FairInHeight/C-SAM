@@ -5,6 +5,17 @@
 #include <stdexcept>
 #include <string>
 
+namespace {
+
+std::string location(const Token& token)
+{
+    return token.filepath + ":" +
+           std::to_string(token.line) + ":" +
+           std::to_string(token.column);
+}
+
+}
+
 Parser::Parser(const std::vector<Token>& tokens)
     : tokens(tokens)
 {
@@ -31,11 +42,7 @@ const Token& Parser::consume(TokenType type, const char* message)
         const Token& token = peek();
 
         throw std::runtime_error(
-            std::string(message) +
-            " at line " +
-            std::to_string(token.line) +
-            ", column " +
-            std::to_string(token.column)
+            location(token) + ": " + message
         );
     }
 
@@ -69,10 +76,7 @@ void Parser::parse_root()
 
     if (root.value != "root") {
         throw std::runtime_error(
-            "Expected 'root' at line " +
-            std::to_string(root.line) +
-            ", column " +
-            std::to_string(root.column)
+            location(root) + ": Expected 'root'"
         );
     }
 
@@ -95,12 +99,8 @@ void Parser::parse_root()
         const Token& token = peek();
 
         throw std::runtime_error(
-            "Unexpected token '" +
-            token.value +
-            "' in root at line " +
-            std::to_string(token.line) +
-            ", column " +
-            std::to_string(token.column)
+            location(token) + ": Unexpected token '" +
+            token.value + "' in root"
         );
     }
 
@@ -123,10 +123,7 @@ void Parser::parse_variable()
 
     if (var.value != "var") {
         throw std::runtime_error(
-            "Expected 'var' at line " +
-            std::to_string(var.line) +
-            ", column " +
-            std::to_string(var.column)
+            location(var) + ": Expected 'var'"
         );
     }
 
@@ -148,10 +145,7 @@ void Parser::parse_variable()
         const Token& token = peek();
 
         throw std::runtime_error(
-            "Expected value after '=' at line " +
-            std::to_string(token.line) +
-            ", column " +
-            std::to_string(token.column)
+            location(token) + ": Expected value after '='"
         );
     }
 
