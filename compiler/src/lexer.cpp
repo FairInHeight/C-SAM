@@ -165,6 +165,33 @@ std::vector<Token> Lexer::tokenize()
             continue;
         }
 
+        // Hash token
+        if (current == '#') {
+            std::size_t start = position;
+            std::size_t startColumn = column;
+
+            ++position;
+            ++column;
+
+            while (position < source.size() &&
+                   (std::isalnum(static_cast<unsigned char>(source[position])) ||
+                    source[position] == '_' ||
+                    source[position] == '-')) {
+
+                ++position;
+                ++column;
+            }
+
+            tokens.push_back({
+                TokenType::Hash,
+                source.substr(start, position - start),
+                line,
+                startColumn
+            });
+
+            continue;
+        }
+
         // Single-character tokens
         TokenType type;
 
@@ -183,10 +210,6 @@ std::vector<Token> Lexer::tokenize()
 
             case '}':
                 type = TokenType::RightBrace;
-                break;
-
-            case '#':
-                type = TokenType::Hash;
                 break;
 
             case ',':
