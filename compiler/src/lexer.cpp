@@ -87,6 +87,7 @@ std::vector<Token> Lexer::tokenize()
             tokens.push_back({
                 TokenType::Identifier,
                 source.substr(start, position - start),
+                filepath,
                 line,
                 startColumn
             });
@@ -107,6 +108,7 @@ std::vector<Token> Lexer::tokenize()
             tokens.push_back({
                 TokenType::Number,
                 source.substr(start, position - start),
+                filepath,
                 line,
                 startColumn
             });
@@ -143,6 +145,7 @@ std::vector<Token> Lexer::tokenize()
             tokens.push_back({
                 TokenType::String,
                 source.substr(start, position - start),
+                filepath,
                 startLine,
                 startColumn
             });
@@ -167,6 +170,7 @@ std::vector<Token> Lexer::tokenize()
             tokens.push_back({
                 TokenType::Hash,
                 source.substr(start, position - start),
+                filepath,
                 line,
                 startColumn
             });
@@ -195,6 +199,7 @@ std::vector<Token> Lexer::tokenize()
         tokens.push_back({
             type,
             std::string(1, current),
+            filepath,
             line,
             column
         });
@@ -206,6 +211,7 @@ std::vector<Token> Lexer::tokenize()
     tokens.push_back({
         TokenType::EndOfFile,
         "",
+        filepath,
         line,
         column
     });
