@@ -63,6 +63,10 @@ int main()
                 std::cout << "Comma";
                 break;
 
+            case TokenType::Equals:
+                std::cout << "Equals";
+                break;
+
             case TokenType::EndOfFile:
                 std::cout << "EndOfFile";
                 break;
