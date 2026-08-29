@@ -1,0 +1,48 @@
+head:
+{
+    title "My C SAM website";
+}
+
+body:
+{
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f4f4f4;
+
+    header:
+    {
+        background: #16823a;
+        color: white;
+        padding: 30px;
+        text-align: center;
+
+        h1 "Welcome to my website" {font-size: 36px;}
+        p "Built with C-SAM.";
+    }
+
+    main:
+    {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        background: white;
+
+        h2 "About"
+        {
+            color: #16823a;
+        }
+
+        p
+        "
+            This is my first C-SAM website.\n
+            It is beautiful, elegant, and predictable.\n
+        ";
+    }
+}
+
+// This is a comment. Just like in C.
+
+/*
+This is a multi-line comment.
+The exact same way C does it.
+*/
