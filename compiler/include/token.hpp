@@ -21,6 +21,25 @@ enum class TokenType {
     EndOfFile
 };
 
+inline const char* token_type_name(TokenType type)
+{
+    switch (type) {
+        case TokenType::Identifier: return "Identifier";
+        case TokenType::String: return "String";
+        case TokenType::Number: return "Number";
+        case TokenType::Colon: return "Colon";
+        case TokenType::Semicolon: return "Semicolon";
+        case TokenType::LeftBrace: return "LeftBrace";
+        case TokenType::RightBrace: return "RightBrace";
+        case TokenType::Equals: return "Equals";
+        case TokenType::Hash: return "Hash";
+        case TokenType::Comma: return "Comma";
+        case TokenType::EndOfFile: return "EndOfFile";
+    }
+
+    return "Unknown";
+}
+
 struct Token {
     TokenType type;
     std::string value;
