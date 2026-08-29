@@ -1,3 +1,4 @@
+#include "args.hpp"
 #include "debug.hpp"
 #include "lexer.hpp"
 
@@ -5,12 +6,22 @@
 #include <iostream>
 #include <sstream>
 
-int main()
+int main(int argc, char* argv[])
 {
-    std::ifstream file("test.csam");
+    Arguments arguments;
+
+    try {
+        arguments = parse_arguments(argc, argv);
+    } catch (const std::invalid_argument&) {
+        return 2;
+    } catch (const std::exception&) {
+        return 1;
+    }
+
+    std::ifstream file(arguments.filepath);
 
     if (!file) {
-        std::cerr << "Could not open test.csam\n";
+        std::cerr << "Could not open " << arguments.filepath << '\n';
         return 1;
     }
 
