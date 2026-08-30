@@ -18,7 +18,6 @@ std::vector<Token> Lexer::tokenize()
     }
 
     std::vector<Token> tokens;
-    std::vector<char> delimiter_stack;
 
     std::size_t position = 0;
     std::size_t line = 1;
@@ -223,25 +222,6 @@ std::vector<Token> Lexer::tokenize()
                 );
         }
 
-        if (current == '{' || current == '<' || current == '[' || current == '(') {
-            delimiter_stack.push_back(current);
-        } else if (current == '}' || current == '>' || current == ']' || current == ')') {
-            const char expected_open =
-                current == '}' ? '{' :
-                current == '>' ? '<' :
-                current == ']' ? '[' : '(';
-
-            if (delimiter_stack.empty() || delimiter_stack.back() != expected_open) {
-                throw std::runtime_error(
-                    filepath + ":" + std::to_string(line) + ":" +
-                    std::to_string(column) + ": Unexpected closing delimiter '" +
-                    std::string(1, current) + "'"
-                );
-            }
-
-            delimiter_stack.pop_back();
-        }
-
         tokens.push_back({
             type,
             std::string(1, current),
@@ -252,21 +232,6 @@ std::vector<Token> Lexer::tokenize()
 
         ++position;
         ++column;
-    }
-
-    if (!delimiter_stack.empty()) {
-        const char opener = delimiter_stack.back();
-        const char expected_closer =
-            opener == '{' ? '}' :
-            opener == '<' ? '>' :
-            opener == '[' ? ']' : ')';
-
-        throw std::runtime_error(
-            filepath + ":" + std::to_string(line) + ":" +
-            std::to_string(column) + ": Unterminated delimiter '" +
-            std::string(1, opener) + "', expected '" +
-            std::string(1, expected_closer) + "'"
-        );
     }
 
     tokens.push_back({
