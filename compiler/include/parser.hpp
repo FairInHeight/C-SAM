@@ -4,6 +4,7 @@
 #include "token.hpp"
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 class Parser {
@@ -15,6 +16,7 @@ public:
 private:
     const std::vector<Token>& tokens;
     std::size_t current = 0;
+    std::vector<std::string> scope_stack;
 
     const Token& peek() const;
     const Token& advance();
