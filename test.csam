@@ -4,7 +4,7 @@
 
     head
     {
-        title ("My C SAM website")
+        title <"My C SAM website">
     }
 
     body
@@ -20,8 +20,8 @@
             padding: 30px;
             text-align: center;
 
-            h1 {"Welcome to my website"} {font-size: 36px;}
-            p {"Built with C-SAM."}
+            h1 <"Welcome to my website"> {font-size: 36px;}
+            p <"Built with C-SAM.">
         }
 
         main
@@ -31,15 +31,16 @@
             padding: 20px;
             background: white;
 
-            h2 ("About")
+            h2 <"About">
             {
                 color: #16823a;
             }
 
-            p (
+            p
+            <
                 "This is my first C-SAM website.\n"
                 "It is beautiful, elegant, and predictable.\n"
-            )
+            >
         }
     }
 }
