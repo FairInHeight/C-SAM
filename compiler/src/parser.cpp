@@ -46,7 +46,8 @@ const Token& Parser::consume(TokenType type, const char* message)
 {
     if (!check(type)) {
         const Token& token = peek();
-        throw std::runtime_error(location(token) + ": " + message);
+        throw std::runtime_error(location(token) + ": " + message +
+                                 " (found '" + token.value + "')");
     }
 
     return advance();
@@ -58,16 +59,15 @@ void Parser::parse()
         std::cout << "Parser: Parsing source\n";
     }
 
-    scope_stack.clear();
     current = 0;
+    scope_stack.clear();
 
     parse_root();
-
     consume(TokenType::EndOfFile, "Expected end of file");
 
     if (!scope_stack.empty()) {
         throw std::runtime_error(
-            location(peek()) + ": Parser scope stack is not empty at end of file"
+            location(peek()) + ": Unclosed scope '" + scope_stack.back() + "'"
         );
     }
 
@@ -92,10 +92,9 @@ void Parser::parse_root()
     }
 
     consume(TokenType::LeftBrace, "Expected '{' after ':root'");
+
     scope_stack.push_back(root.value);
-
     parse_block();
-
     scope_stack.pop_back();
 }
 
@@ -113,31 +112,32 @@ void Parser::parse_block()
             continue;
         }
 
-        if (check(TokenType::Identifier)) {
-            if (current + 1 >= tokens.size()) {
-                throw std::runtime_error(
-                    location(peek()) + ": Expected '{' or '<' after tag name"
-                );
-            }
+        if (!check(TokenType::Identifier)) {
+            unexpected(peek(), "Expected tag, property, or variable declaration");
+        }
 
-            TokenType next = tokens[current + 1].type;
-
-            if (next == TokenType::LeftBrace || next == TokenType::LeftAngle) {
-                parse_tag();
-                continue;
-            }
-
-            if (next == TokenType::Colon) {
-                parse_property();
-                continue;
-            }
-
+        if (current + 1 >= tokens.size()) {
             throw std::runtime_error(
-                location(peek()) + ": Expected '{' or '<' after tag name"
+                location(peek()) + ": Expected '{', '<', or ':' after identifier"
             );
         }
 
-        unexpected(peek(), "Unexpected token in block");
+        const TokenType next = tokens[current + 1].type;
+
+        if (next == TokenType::LeftBrace || next == TokenType::LeftAngle) {
+            parse_tag();
+            continue;
+        }
+
+        if (next == TokenType::Colon) {
+            parse_property();
+            continue;
+        }
+
+        throw std::runtime_error(
+            location(peek()) +
+            ": Expected '{' or '<' after tag name (or ':' for a property)"
+        );
     }
 
     consume(TokenType::RightBrace, "Expected '}' after block");
@@ -155,17 +155,9 @@ void Parser::parse_variable()
         throw std::runtime_error(location(var) + ": Expected 'var'");
     }
 
-    consume(TokenType::Identifier, "Expected variable name");
+    consume(TokenType::Identifier, "Expected variable name after 'var'");
     consume(TokenType::Equals, "Expected '=' after variable name");
-
-    if (!check(TokenType::String) &&
-        !check(TokenType::Number) &&
-        !check(TokenType::Hash) &&
-        !check(TokenType::Identifier)) {
-        throw std::runtime_error(location(peek()) + ": Expected value after '='");
-    }
-
-    advance();
+    parse_value("variable declaration");
     consume(TokenType::Semicolon, "Expected ';' after variable declaration");
 }
 
@@ -209,7 +201,7 @@ void Parser::parse_tag_content()
 
     if (check(TokenType::RightAngle)) {
         throw std::runtime_error(
-            location(peek()) + ": Expected tag content after '<'"
+            location(peek()) + ": Expected content after '<'"
         );
     }
 
@@ -228,29 +220,35 @@ void Parser::parse_tag_content()
 
 void Parser::parse_property()
 {
-    const Token& property = consume(TokenType::Identifier, "Expected property name");
+    const Token& property = consume(
+        TokenType::Identifier,
+        "Expected property name"
+    );
 
     if (csam_debug) {
         std::cout << "Parser: Parsing property " << property.value << '\n';
     }
 
     consume(TokenType::Colon, "Expected ':' after property name");
+    parse_value("property");
+    consume(TokenType::Semicolon, "Expected ';' after property value");
+}
 
+void Parser::parse_value(const char* context)
+{
     if (check(TokenType::Semicolon)) {
         throw std::runtime_error(
-            location(peek()) + ": Expected value after property ':'"
+            location(peek()) + ": Expected value in " + context
         );
     }
 
     while (!check(TokenType::Semicolon)) {
         if (check(TokenType::RightBrace) || check(TokenType::EndOfFile)) {
             throw std::runtime_error(
-                location(peek()) + ": Expected ';' after property value"
+                location(peek()) + ": Expected ';' after " + context
             );
         }
 
         advance();
     }
-
-    advance();
 }
