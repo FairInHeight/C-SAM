@@ -13,6 +13,8 @@ enum class TokenType {
     Semicolon,
     LeftBrace,
     RightBrace,
+    LeftAngle,
+    RightAngle,
     Equals,
 
     Hash,
@@ -31,6 +33,8 @@ inline const char* token_type_name(TokenType type)
         case TokenType::Semicolon: return "Semicolon";
         case TokenType::LeftBrace: return "LeftBrace";
         case TokenType::RightBrace: return "RightBrace";
+        case TokenType::LeftAngle: return "LeftAngle";
+        case TokenType::RightAngle: return "RightAngle";
         case TokenType::Equals: return "Equals";
         case TokenType::Hash: return "Hash";
         case TokenType::Comma: return "Comma";
