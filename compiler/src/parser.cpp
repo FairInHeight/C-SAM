@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -18,6 +19,38 @@ std::string location(const Token& token)
 {
     throw std::runtime_error(location(token) + ": " + message +
                              " (found '" + token.value + "')");
+}
+
+char closing_delimiter(char opener)
+{
+    switch (opener) {
+        case '{': return '}';
+        case '<': return '>';
+        case '[': return ']';
+        case '(': return ')';
+        default: return '\0';
+    }
+}
+
+bool is_opener(TokenType type)
+{
+    return type == TokenType::LeftBrace ||
+           type == TokenType::LeftAngle ||
+           type == TokenType::LeftBracket ||
+           type == TokenType::LeftParen;
+}
+
+bool is_closer(TokenType type)
+{
+    return type == TokenType::RightBrace ||
+           type == TokenType::RightAngle ||
+           type == TokenType::RightBracket ||
+           type == TokenType::RightParen;
+}
+
+char delimiter_char(const Token& token)
+{
+    return token.value.empty() ? '\0' : token.value[0];
 }
 
 }
@@ -53,6 +86,54 @@ const Token& Parser::consume(TokenType type, const char* message)
     return advance();
 }
 
+void Parser::validate_delimiters() const
+{
+    std::vector<const Token*> delimiters;
+
+    for (const Token& token : tokens) {
+        if (is_opener(token.type)) {
+            delimiters.push_back(&token);
+            continue;
+        }
+
+        if (!is_closer(token.type)) {
+            continue;
+        }
+
+        if (delimiters.empty()) {
+            throw std::runtime_error(
+                location(token) + ": Unexpected closing delimiter '" +
+                std::string(1, delimiter_char(token)) + "'"
+            );
+        }
+
+        const Token& opener = *delimiters.back();
+        const char expected = closing_delimiter(delimiter_char(opener));
+        const char actual = delimiter_char(token);
+
+        if (actual != expected) {
+            throw std::runtime_error(
+                location(token) + ": Unexpected closing delimiter '" +
+                std::string(1, actual) + "'; expected '" +
+                std::string(1, expected) + "' for '" +
+                std::string(1, delimiter_char(opener)) + "' opened at " +
+                location(opener)
+            );
+        }
+
+        delimiters.pop_back();
+    }
+
+    if (!delimiters.empty()) {
+        const Token& opener = *delimiters.back();
+        throw std::runtime_error(
+            location(opener) + ": Unterminated delimiter '" +
+            std::string(1, delimiter_char(opener)) + "'; expected '" +
+            std::string(1, closing_delimiter(delimiter_char(opener))) + "'"
+        );
+    }
+}
+
 void Parser::parse()
 {
     if (csam_debug) {
@@ -62,6 +143,7 @@ void Parser::parse()
     current = 0;
     scope_stack.clear();
 
+    validate_delimiters();
     parse_root();
     consume(TokenType::EndOfFile, "Expected end of file");
 
