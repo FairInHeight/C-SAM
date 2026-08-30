@@ -24,11 +24,12 @@ private:
     const Token& consume(TokenType type, const char* message);
 
     void parse_root();
+    void parse_block();
     void parse_variable();
     void parse_tag();
     void parse_tag_content();
-    void parse_block();
     void parse_property();
+    void parse_value(const char* context);
 };
 
 #endif
