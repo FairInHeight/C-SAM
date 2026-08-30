@@ -58,9 +58,20 @@ void Parser::parse()
         std::cout << "Parser: Parsing source\n";
     }
 
+    scope_stack.clear();
+    current = 0;
+
     parse_root();
 
     consume(TokenType::EndOfFile, "Expected end of file");
+
+    if (!scope_stack.empty()) {
+        throw std::runtime_error(
+            location(peek()) + ": Parser scope stack is not empty at end of file"
+        );
+    }
+
+    scope_stack.clear();
 }
 
 void Parser::parse_root()
@@ -81,7 +92,11 @@ void Parser::parse_root()
     }
 
     consume(TokenType::LeftBrace, "Expected '{' after ':root'");
+    scope_stack.push_back(root.value);
+
     parse_block();
+
+    scope_stack.pop_back();
 }
 
 void Parser::parse_block()
@@ -164,7 +179,9 @@ void Parser::parse_tag()
 
     if (check(TokenType::LeftBrace)) {
         advance();
+        scope_stack.push_back(tag.value);
         parse_block();
+        scope_stack.pop_back();
         return;
     }
 
@@ -173,7 +190,9 @@ void Parser::parse_tag()
 
         if (check(TokenType::LeftBrace)) {
             advance();
+            scope_stack.push_back(tag.value);
             parse_block();
+            scope_stack.pop_back();
         }
 
         return;
