@@ -23,6 +23,10 @@ private:
 
     void parse_root();
     void parse_variable();
+    void parse_tag();
+    void parse_tag_content();
+    void parse_block();
+    void parse_property();
 };
 
 #endif
