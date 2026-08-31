@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <sstream>
-#include <string>
+#include <utility>
 
 namespace {
 
@@ -21,44 +21,50 @@ std::string tokens_to_string(const std::vector<Token>& tokens)
     return output.str();
 }
 
-void print_content(const ContentNode& content, std::size_t depth)
+void print_node(const ASTNode& node, std::size_t depth)
 {
-    std::cout << std::string(depth * 4, ' ') << "Content: "
-              << tokens_to_string(content.tokens()) << '\n';
-}
+    const std::string indent(depth * 4, ' ');
 
-void print_variable(const VariableNode& variable, std::size_t depth)
-{
-    std::cout << std::string(depth * 4, ' ') << "Variable: "
-              << variable.name() << " = "
-              << tokens_to_string(variable.value()) << '\n';
-}
+    switch (node.type()) {
+        case ASTNodeType::Root: {
+            const auto& root = static_cast<const RootNode&>(node);
+            for (const auto& child : root.children()) {
+                print_node(*child, depth);
+            }
+            break;
+        }
 
-void print_property(const PropertyNode& property, std::size_t depth)
-{
-    std::cout << std::string(depth * 4, ' ') << "Property: "
-              << property.name() << " = "
-              << tokens_to_string(property.value()) << '\n';
-}
+        case ASTNodeType::Tag: {
+            const auto& tag = static_cast<const TagNode&>(node);
+            std::cout << indent << "Tag: " << tag.name() << '\n';
+            for (const auto& child : tag.children()) {
+                print_node(*child, depth + 1);
+            }
+            break;
+        }
 
-void print_tag(const TagNode& tag, std::size_t depth)
-{
-    std::cout << std::string(depth * 4, ' ') << "Tag: " << tag.name() << '\n';
+        case ASTNodeType::Content: {
+            const auto& content = static_cast<const ContentNode&>(node);
+            std::cout << indent << "Content: "
+                      << tokens_to_string(content.tokens()) << '\n';
+            break;
+        }
 
-    if (tag.content() != nullptr) {
-        print_content(*tag.content(), depth + 1);
-    }
+        case ASTNodeType::Property: {
+            const auto& property = static_cast<const PropertyNode&>(node);
+            std::cout << indent << "Property: "
+                      << property.name() << " = "
+                      << tokens_to_string(property.value()) << '\n';
+            break;
+        }
 
-    for (const auto& variable : tag.variables()) {
-        print_variable(*variable, depth + 1);
-    }
-
-    for (const auto& property : tag.properties()) {
-        print_property(*property, depth + 1);
-    }
-
-    for (const auto& child : tag.children()) {
-        print_tag(*child, depth + 1);
+        case ASTNodeType::Variable: {
+            const auto& variable = static_cast<const VariableNode&>(node);
+            std::cout << indent << "Variable: "
+                      << variable.name() << " = "
+                      << tokens_to_string(variable.value()) << '\n';
+            break;
+        }
     }
 }
 
@@ -66,9 +72,7 @@ void print_tag(const TagNode& tag, std::size_t depth)
 
 ASTNode::ASTNode(ASTNodeType type, const Token& token)
     : node_type(type),
-      source_filepath(token.filepath),
-      source_line(token.line),
-      source_column(token.column)
+      source_location(token.location)
 {
 }
 
@@ -104,17 +108,18 @@ TagNode::TagNode(const Token& name_token)
 
 void TagNode::set_content(std::unique_ptr<ContentNode> content)
 {
-    content_node = std::move(content);
+    content_node = content.get();
+    child_nodes.push_back(std::move(content));
 }
 
 void TagNode::add_property(std::unique_ptr<PropertyNode> property)
 {
-    property_nodes.push_back(std::move(property));
+    child_nodes.push_back(std::move(property));
 }
 
 void TagNode::add_variable(std::unique_ptr<VariableNode> variable)
 {
-    variable_nodes.push_back(std::move(variable));
+    child_nodes.push_back(std::move(variable));
 }
 
 void TagNode::add_child(std::unique_ptr<TagNode> child)
@@ -129,32 +134,21 @@ RootNode::RootNode(const Token& root_token)
 
 void RootNode::add_property(std::unique_ptr<PropertyNode> property)
 {
-    property_nodes.push_back(std::move(property));
+    child_nodes.push_back(std::move(property));
 }
 
 void RootNode::add_variable(std::unique_ptr<VariableNode> variable)
 {
-    variable_nodes.push_back(std::move(variable));
+    child_nodes.push_back(std::move(variable));
 }
 
 void RootNode::add_tag(std::unique_ptr<TagNode> tag)
 {
-    tag_nodes.push_back(std::move(tag));
+    child_nodes.push_back(std::move(tag));
 }
 
 void print_ast(const RootNode& root)
 {
     std::cout << "AST:\n";
-
-    for (const auto& variable : root.variables()) {
-        print_variable(*variable, 1);
-    }
-
-    for (const auto& property : root.properties()) {
-        print_property(*property, 1);
-    }
-
-    for (const auto& tag : root.tags()) {
-        print_tag(*tag, 1);
-    }
+    print_node(root, 1);
 }
