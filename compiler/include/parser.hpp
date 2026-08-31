@@ -23,6 +23,7 @@ private:
     bool check(TokenType type) const;
     const Token& consume(TokenType type, const char* message);
 
+    void validate_delimiters() const;
     void parse_root();
     void parse_block();
     void parse_variable();
