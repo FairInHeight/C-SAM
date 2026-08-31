@@ -26,7 +26,6 @@ private:
     const Token& consume(TokenType type, const char* message);
 
     void validate_delimiters() const;
-    void parse_root(RootNode& root);
     void parse_block();
     void parse_variable();
     void parse_tag();
