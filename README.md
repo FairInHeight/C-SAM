@@ -24,7 +24,7 @@ C SAM source
     v
   Lexer
     |
-    | Token stream + filepath/line/column
+    | Token stream + SourceLocation
     v
   Parser
     |
@@ -210,7 +210,7 @@ The lexer is responsible for converting source characters into tokens. It recogn
 - End-of-file
 - C/C++-style line and block comments
 
-Tokens carry:
+Tokens carry a shared `SourceLocation` containing:
 
 ```text
 filepath
@@ -236,7 +236,7 @@ It currently:
 
 Delimiter matching is parser responsibility because the parser understands the syntactic meaning of the delimiters. The lexer only identifies the punctuation as tokens.
 
-The parser's scope stack is separate from delimiter validation. The delimiter stack answers whether punctuation is properly paired; the scope stack answers which C SAM element is currently being parsed.
+The parser's scope stack is separate from delimiter validation. The delimiter stack answers whether punctuation is properly paired; the scope stack answers which C SAM element is currently being parsed. The scope stack contains non-owning pointers to AST nodes owned by the tree.
 
 ## AST
 
@@ -251,7 +251,13 @@ ASTNode
 └── VariableNode
 ```
 
-The AST stores source location information and uses `std::unique_ptr` for ownership.
+Every AST node stores a `SourceLocation` describing where the construct originated in the source.
+
+The AST uses `std::unique_ptr` for ownership. The AST owns its nodes; the parser does not own AST nodes and only keeps non-owning pointers to active scope nodes while parsing.
+
+`RootNode` and `TagNode` each maintain one ordered child collection of `ASTNode` objects. This preserves the original sibling order between variables, properties, content, and nested tags instead of grouping those node types into separate lists.
+
+`TagNode` also keeps a non-owning pointer to its `ContentNode` for convenient access. The content node itself is owned by the tag's ordered child collection.
 
 Conceptually, a document such as:
 
@@ -281,7 +287,7 @@ Root
         └── Property: color = mycolor
 ```
 
-The parser owns no AST nodes. The AST owns its nodes, while the parser's scope stack holds non-owning pointers to the active root/tag nodes.
+The AST preserves source order within each scope. Values and tag content remain token sequences at this stage rather than being interpreted semantically.
 
 The AST does not currently perform semantic analysis, CSS validation, HTML validation, variable resolution, or code generation.
 
@@ -301,7 +307,7 @@ Debug mode exposes the compiler's working state:
 ./csam -d test.csam
 ```
 
-Debug output currently includes lexer progress, the token stream, parser progress, and the constructed AST.
+Debug output currently includes lexer progress, the token stream, parser progress, and the constructed AST. The AST debug output follows the same ordered tree structure used by the AST itself.
 
 ## Command-line arguments
 
@@ -338,7 +344,6 @@ Invalid argument syntax and invalid flags produce non-zero exit codes.
 - Unterminated strings
 - Unterminated or mismatched delimiters
 - Unclosed tag blocks
-- Empty tag content
 - Missing property or variable values
 
 The goal is to keep a good example and a bad example available while each grammar feature is developed.
@@ -356,8 +361,10 @@ The goal is to keep a good example and a bad example available while each gramma
 9. **The lexer stays lexical.** It identifies tokens and validates lexical constructs but does not interpret grammar.
 10. **The parser owns grammar.** It validates structure, tracks nesting, and builds the AST.
 11. **The AST stays structural.** Semantic validation and code generation come later.
-12. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
+12. **The AST preserves source order.** Sibling declarations and tags remain in the order they appeared in the source.
+13. **Ownership stays explicit.** AST ownership uses `std::unique_ptr`; parser scope tracking is non-owning.
+14. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
 
 ## Next stage
 
-The first AST is now in place. The next work should focus on testing the parser/AST thoroughly against valid and invalid syntax before expanding the language or beginning semantic analysis and code generation.
+The first AST is now in place and has been cleaned up to preserve source order and consistent source locations. The next work should focus on testing the parser/AST thoroughly against valid and invalid syntax before expanding the language or beginning semantic analysis and code generation.
