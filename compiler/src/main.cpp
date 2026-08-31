@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -41,9 +42,9 @@ int main(int argc, char* argv[])
         if (csam_debug) {
             for (const Token& token : tokens) {
                 std::cout
-                    << token.filepath << ":"
-                    << token.line << ":"
-                    << token.column << " "
+                    << token.location.filepath << ":"
+                    << token.location.line << ":"
+                    << token.location.column << " "
                     << token_type_name(token.type);
 
                 if (!token.value.empty()) {
