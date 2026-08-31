@@ -1,4 +1,5 @@
 #include "args.hpp"
+#include "ast.hpp"
 #include "debug.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
@@ -6,6 +7,8 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <string>
+#include <vector>
 
 int main(int argc, char* argv[])
 {
@@ -30,10 +33,10 @@ int main(int argc, char* argv[])
         std::stringstream buffer;
         buffer << file.rdbuf();
 
-        std::string source = buffer.str();
+        const std::string source = buffer.str();
 
         Lexer lexer(source, filepath);
-        std::vector<Token> tokens = lexer.tokenize();
+        const std::vector<Token> tokens = lexer.tokenize();
 
         if (csam_debug) {
             for (const Token& token : tokens) {
@@ -52,7 +55,11 @@ int main(int argc, char* argv[])
         }
 
         Parser parser(tokens);
-        parser.parse();
+        std::unique_ptr<RootNode> ast = parser.parse();
+
+        if (csam_debug) {
+            print_ast(*ast);
+        }
     }
 
     return 0;
