@@ -15,6 +15,10 @@ enum class TokenType {
     RightBrace,
     LeftAngle,
     RightAngle,
+    LeftBracket,
+    RightBracket,
+    LeftParen,
+    RightParen,
     Equals,
 
     Hash,
@@ -35,6 +39,10 @@ inline const char* token_type_name(TokenType type)
         case TokenType::RightBrace: return "RightBrace";
         case TokenType::LeftAngle: return "LeftAngle";
         case TokenType::RightAngle: return "RightAngle";
+        case TokenType::LeftBracket: return "LeftBracket";
+        case TokenType::RightBracket: return "RightBracket";
+        case TokenType::LeftParen: return "LeftParen";
+        case TokenType::RightParen: return "RightParen";
         case TokenType::Equals: return "Equals";
         case TokenType::Hash: return "Hash";
         case TokenType::Comma: return "Comma";
