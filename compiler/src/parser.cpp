@@ -11,9 +11,9 @@ namespace {
 
 std::string location(const Token& token)
 {
-    return token.filepath + ":" +
-           std::to_string(token.line) + ":" +
-           std::to_string(token.column);
+    return token.location.filepath + ":" +
+           std::to_string(token.location.line) + ":" +
+           std::to_string(token.location.column);
 }
 
 [[noreturn]] void unexpected(const Token& token, const std::string& message)
@@ -204,7 +204,7 @@ void Parser::parse_block()
 
         if (current + 1 >= tokens.size()) {
             throw std::runtime_error(
-                location(peek()) + ": Expected '{', '<', or ':' after identifier"
+                location(peek()) + ": Expected '{' or '<' after tag name"
             );
         }
 
