@@ -22,15 +22,11 @@ public:
     virtual ~ASTNode() = default;
 
     ASTNodeType type() const { return node_type; }
-    const std::string& filepath() const { return source_filepath; }
-    std::size_t line() const { return source_line; }
-    std::size_t column() const { return source_column; }
+    const SourceLocation& location() const { return source_location; }
 
 private:
     ASTNodeType node_type;
-    std::string source_filepath;
-    std::size_t source_line;
-    std::size_t source_column;
+    SourceLocation source_location;
 };
 
 class ContentNode final : public ASTNode {
@@ -75,22 +71,18 @@ public:
     const std::string& name() const { return tag_name; }
 
     void set_content(std::unique_ptr<ContentNode> content);
-    ContentNode* content() const { return content_node.get(); }
+    ContentNode* content() const { return content_node; }
 
     void add_property(std::unique_ptr<PropertyNode> property);
     void add_variable(std::unique_ptr<VariableNode> variable);
     void add_child(std::unique_ptr<TagNode> child);
 
-    const std::vector<std::unique_ptr<PropertyNode>>& properties() const { return property_nodes; }
-    const std::vector<std::unique_ptr<VariableNode>>& variables() const { return variable_nodes; }
-    const std::vector<std::unique_ptr<TagNode>>& children() const { return child_nodes; }
+    const std::vector<std::unique_ptr<ASTNode>>& children() const { return child_nodes; }
 
 private:
     std::string tag_name;
-    std::unique_ptr<ContentNode> content_node;
-    std::vector<std::unique_ptr<PropertyNode>> property_nodes;
-    std::vector<std::unique_ptr<VariableNode>> variable_nodes;
-    std::vector<std::unique_ptr<TagNode>> child_nodes;
+    ContentNode* content_node = nullptr;
+    std::vector<std::unique_ptr<ASTNode>> child_nodes;
 };
 
 class RootNode final : public ASTNode {
@@ -101,14 +93,10 @@ public:
     void add_variable(std::unique_ptr<VariableNode> variable);
     void add_tag(std::unique_ptr<TagNode> tag);
 
-    const std::vector<std::unique_ptr<PropertyNode>>& properties() const { return property_nodes; }
-    const std::vector<std::unique_ptr<VariableNode>>& variables() const { return variable_nodes; }
-    const std::vector<std::unique_ptr<TagNode>>& tags() const { return tag_nodes; }
+    const std::vector<std::unique_ptr<ASTNode>>& children() const { return child_nodes; }
 
 private:
-    std::vector<std::unique_ptr<PropertyNode>> property_nodes;
-    std::vector<std::unique_ptr<VariableNode>> variable_nodes;
-    std::vector<std::unique_ptr<TagNode>> tag_nodes;
+    std::vector<std::unique_ptr<ASTNode>> child_nodes;
 };
 
 void print_ast(const RootNode& root);
