@@ -100,8 +100,6 @@ int main()
     }
 
     {
-        // Whitespace prevents the number and identifier from becoming a
-        // dimension. The source locations make that distinction explicit.
         auto root = parse(":root { div { width: 10 px; } }");
         auto* tag = dynamic_cast<TagNode*>(root->children()[0].get());
         assert(tag != nullptr);
@@ -112,6 +110,69 @@ int main()
         assert(property->value()[1]->type() == ASTNodeType::RawValue);
         assert(static_cast<const NumberValueNode&>(*property->value()[0]).value() == "10");
         assert(static_cast<const RawValueNode&>(*property->value()[1]).value() == "px");
+    }
+
+    // Parser/value-parser integration: functions must survive structural parsing
+    // and appear as FunctionValueNodes in the property's AST.
+    {
+        auto root = parse(
+            ":root { div { "
+            "color: rgb(255, 0, 0); "
+            "width: calc(100% - 20px); "
+            "transform: scale(2, translate(10px, 20px)); "
+            "} }");
+
+        auto* tag = dynamic_cast<TagNode*>(root->children()[0].get());
+        assert(tag != nullptr);
+        assert(tag->children().size() == 3);
+
+        auto* color = dynamic_cast<PropertyNode*>(tag->children()[0].get());
+        assert(color != nullptr);
+        assert(color->value().size() == 1);
+        assert(color->value()[0]->type() == ASTNodeType::FunctionValue);
+        const auto& rgb = static_cast<const FunctionValueNode&>(*color->value()[0]);
+        assert(rgb.name() == "rgb");
+        assert(rgb.arguments().size() == 3);
+        assert(rgb.arguments()[0].size() == 1);
+        assert(rgb.arguments()[1].size() == 1);
+        assert(rgb.arguments()[2].size() == 1);
+        assert(static_cast<const NumberValueNode&>(*rgb.arguments()[0][0]).value() == "255");
+        assert(static_cast<const NumberValueNode&>(*rgb.arguments()[1][0]).value() == "0");
+        assert(static_cast<const NumberValueNode&>(*rgb.arguments()[2][0]).value() == "0");
+
+        auto* width = dynamic_cast<PropertyNode*>(tag->children()[1].get());
+        assert(width != nullptr);
+        assert(width->value().size() == 1);
+        const auto& calc = static_cast<const FunctionValueNode&>(*width->value()[0]);
+        assert(calc.name() == "calc");
+        assert(calc.arguments().size() == 1);
+        assert(calc.arguments()[0].size() == 5);
+        assert(calc.arguments()[0][0]->type() == ASTNodeType::PercentageValue);
+        assert(calc.arguments()[0][1]->type() == ASTNodeType::RawValue);
+        assert(calc.arguments()[0][1]->value() == "-");
+        assert(calc.arguments()[0][2]->type() == ASTNodeType::DimensionValue);
+        assert(calc.arguments()[0][3]->type() == ASTNodeType::RawValue);
+        assert(calc.arguments()[0][3]->value() == "-");
+        assert(calc.arguments()[0][4]->type() == ASTNodeType::DimensionValue);
+
+        auto* transform = dynamic_cast<PropertyNode*>(tag->children()[2].get());
+        assert(transform != nullptr);
+        assert(transform->value().size() == 1);
+        const auto& scale = static_cast<const FunctionValueNode&>(*transform->value()[0]);
+        assert(scale.name() == "scale");
+        assert(scale.arguments().size() == 2);
+        assert(scale.arguments()[0].size() == 1);
+        assert(static_cast<const NumberValueNode&>(*scale.arguments()[0][0]).value() == "2");
+        assert(scale.arguments()[1].size() == 1);
+        assert(scale.arguments()[1][0]->type() == ASTNodeType::FunctionValue);
+
+        const auto& translate = static_cast<const FunctionValueNode&>(*scale.arguments()[1][0]);
+        assert(translate.name() == "translate");
+        assert(translate.arguments().size() == 2);
+        assert(translate.arguments()[0].size() == 1);
+        assert(translate.arguments()[1].size() == 1);
+        assert(static_cast<const DimensionValueNode&>(*translate.arguments()[0][0]).unit() == "px");
+        assert(static_cast<const DimensionValueNode&>(*translate.arguments()[1][0]).unit() == "px");
     }
 
     return 0;
