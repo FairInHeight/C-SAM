@@ -14,6 +14,7 @@ TEST_COMMON_SRC = compiler/src/lexer.cpp \
 LEXER_TEST = tests/test_lexer
 PARSER_TEST = tests/test_parser
 AST_TEST = tests/test_ast
+VALUE_PARSER_TEST = tests/test_value_parser
 
 .PHONY: all test clean clean-test auto
 
@@ -31,7 +32,10 @@ $(PARSER_TEST): tests/test_parser.cpp $(TEST_COMMON_SRC)
 $(AST_TEST): tests/test_ast.cpp $(TEST_COMMON_SRC)
 	$(CXX) $(CXXFLAGS) tests/test_ast.cpp $(TEST_COMMON_SRC) -o $(AST_TEST)
 
-test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
+$(VALUE_PARSER_TEST): tests/test_value_parser.cpp $(TEST_COMMON_SRC)
+	$(CXX) $(CXXFLAGS) tests/test_value_parser.cpp $(TEST_COMMON_SRC) -o $(VALUE_PARSER_TEST)
+
+test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST) $(VALUE_PARSER_TEST)
 	@echo "Running lexer tests..."
 	@./$(LEXER_TEST)
 	@echo "Lexer tests: PASS"
@@ -41,13 +45,16 @@ test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 	@echo "Running AST tests..."
 	@./$(AST_TEST)
 	@echo "AST tests: PASS"
+	@echo "Running value parser tests..."
+	@./$(VALUE_PARSER_TEST)
+	@echo "Value parser tests: PASS"
 	@echo "All tests passed."
 
 clean-test:
-	rm -f $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
+	rm -f $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST) $(VALUE_PARSER_TEST)
 
 clean:
-	rm -f $(TARGET) $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
+	rm -f $(TARGET) $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST) $(VALUE_PARSER_TEST)
 
 auto:
 	$(MAKE) clean && \
