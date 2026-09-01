@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,19 @@ static std::vector<std::unique_ptr<ValueNode>> parse_value(const std::string& so
     std::size_t current = 0;
     ValueParser parser(tokens, current);
     return parser.parse_value();
+}
+
+static void assert_parse_error(const std::string& source)
+{
+    bool failed = false;
+
+    try {
+        (void)parse_value(source);
+    } catch (const std::runtime_error&) {
+        failed = true;
+    }
+
+    assert(failed);
 }
 
 int main()
@@ -119,6 +133,58 @@ int main()
         assert(values[0]->type() == ASTNodeType::NumberValue);
         assert(values[1]->type() == ASTNodeType::RawValue);
     }
+
+    // Boundary and whitespace cases.
+    {
+        auto values = parse_value("-42 -3.5 1e3 -2.5e-2 0;");
+        assert(values.size() == 5);
+        assert(static_cast<const NumberValueNode&>(*values[0]).value() == "-42");
+        assert(static_cast<const NumberValueNode&>(*values[1]).value() == "-3.5");
+        assert(static_cast<const NumberValueNode&>(*values[2]).value() == "1e3");
+        assert(static_cast<const NumberValueNode&>(*values[3]).value() == "-2.5e-2");
+        assert(static_cast<const NumberValueNode&>(*values[4]).value() == "0");
+    }
+
+    {
+        auto values = parse_value("-10px -25% 0px 0%;");
+        assert(values.size() == 4);
+        assert(static_cast<const DimensionValueNode&>(*values[0]).number() == "-10");
+        assert(static_cast<const PercentageValueNode&>(*values[1]).number() == "-25");
+        assert(static_cast<const DimensionValueNode&>(*values[2]).number() == "0");
+        assert(static_cast<const PercentageValueNode&>(*values[3]).number() == "0");
+    }
+
+    {
+        auto values = parse_value("foo( 10px , 20% , red );");
+        assert(values.size() == 1);
+        const auto& function = static_cast<const FunctionValueNode&>(*values[0]);
+        assert(function.arguments().size() == 3);
+        assert(function.arguments()[0][0]->type() == ASTNodeType::DimensionValue);
+        assert(function.arguments()[1][0]->type() == ASTNodeType::PercentageValue);
+        assert(function.arguments()[2][0]->type() == ASTNodeType::RawValue);
+    }
+
+    {
+        auto values = parse_value("calc(100% - 20px + 5px);");
+        assert(values.size() == 1);
+        const auto& function = static_cast<const FunctionValueNode&>(*values[0]);
+        assert(function.arguments().size() == 1);
+        assert(function.arguments()[0].size() == 5);
+        assert(function.arguments()[0][0]->type() == ASTNodeType::PercentageValue);
+        assert(function.arguments()[0][1]->type() == ASTNodeType::RawValue);
+        assert(function.arguments()[0][2]->type() == ASTNodeType::DimensionValue);
+        assert(function.arguments()[0][3]->type() == ASTNodeType::RawValue);
+        assert(function.arguments()[0][4]->type() == ASTNodeType::DimensionValue);
+    }
+
+    // Invalid function arguments must be rejected.
+    assert_parse_error("foo(, 10px);");
+    assert_parse_error("foo(10px,);");
+    assert_parse_error("foo(10px;");
+    assert_parse_error("foo(10px, 20px;");
+
+    // A value parser must reject an empty value rather than producing an empty AST.
+    assert_parse_error(";");
 
     return 0;
 }
