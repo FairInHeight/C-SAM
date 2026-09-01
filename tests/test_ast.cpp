@@ -46,7 +46,10 @@ int main()
         assert(tag->children().empty());
 
         auto content = std::make_unique<ContentNode>(
-            token(TokenType::Identifier, "hello"));
+            token(TokenType::LeftAngle, "<"));
+        assert(content->tokens().empty());
+
+        content->add_token(token(TokenType::Identifier, "hello"));
         content->add_token(token(TokenType::Identifier, "world"));
         tag->set_content(std::move(content));
 
@@ -66,10 +69,11 @@ int main()
         tag->add_child(std::make_unique<TagNode>(
             token(TokenType::Identifier, "span")));
 
-        assert(tag->children().size() == 3);
-        assert(tag->children()[0]->type() == ASTNodeType::Property);
-        assert(tag->children()[1]->type() == ASTNodeType::Variable);
-        assert(tag->children()[2]->type() == ASTNodeType::Tag);
+        assert(tag->children().size() == 4);
+        assert(tag->children()[0]->type() == ASTNodeType::Content);
+        assert(tag->children()[1]->type() == ASTNodeType::Property);
+        assert(tag->children()[2]->type() == ASTNodeType::Variable);
+        assert(tag->children()[3]->type() == ASTNodeType::Tag);
     }
 
     {
