@@ -2,7 +2,9 @@
 
 C SAM is a C++23 compiler project for a new web language that combines HTML-style document structure and CSS styling into a single source file.
 
-The project is intentionally being built in small compiler stages. The current compiler can tokenize C SAM, validate its basic grammar, and construct an AST.
+The project is intentionally being built in small compiler stages. The current compiler can tokenize C SAM, validate its basic grammar, construct a structural AST, and begin converting CSS-style values into semantic AST value nodes.
+
+The language is still being designed. `test.csam` is the current de facto grammar reference.
 
 ## Project goals
 
@@ -14,8 +16,7 @@ C SAM is designed to:
 - Keep the syntax small, predictable, and easy to parse.
 - Preserve useful source locations throughout the compiler for clear diagnostics.
 - Keep compiler filesystem handling platform-independent by using the C++ standard filesystem library rather than hard-coded Unix or Windows path syntax.
-
-The language is still being designed. `test.csam` is the current de facto grammar reference.
+- Eventually compile one C SAM source into generated HTML and CSS.
 
 ## Current compiler pipeline
 
@@ -29,9 +30,13 @@ C SAM source
     v
   Parser
     |
-    | Grammar validation + nesting + AST construction
+    | Grammar validation + nesting + semantic value parsing
     v
    AST
+    |
+    | Future
+    v
+CSS / HTML generators
 ```
 
 The compiler is written in C++23 and is built with the project's Makefile. The compiler's source-file path handling is platform-independent, but the current Makefile uses standard Unix shell commands; native Windows builds may therefore require an environment such as MSYS2 or Cygwin until a native Windows build path is added.
@@ -47,14 +52,16 @@ The compiler is written in C++23 and is built with the project's Makefile. The c
 │   │   ├── debug.hpp
 │   │   ├── lexer.hpp
 │   │   ├── parser.hpp
-│   │   └── token.hpp
+│   │   ├── token.hpp
+│   │   └── value.hpp
 │   └── src
 │       ├── args.cpp
 │       ├── ast.cpp
 │       ├── debug.cpp
 │       ├── lexer.cpp
 │       ├── main.cpp
-│       └── parser.cpp
+│       ├── parser.cpp
+│       └── value.cpp
 ├── tests
 │   ├── test_ast.cpp
 │   ├── test_lexer.cpp
@@ -81,7 +88,7 @@ There is no colon syntax on ordinary tags. `:root` is special and is the require
 
 ### Tags
 
-A tag is an identifier followed immediately by either `{` or `<`.
+A tag is an identifier followed by either `{` or `<`.
 
 An empty/structural tag:
 
@@ -106,11 +113,11 @@ h1 <"Welcome">
 }
 ```
 
-The word before `{` or `<` is the tag name. Tags can be nested to arbitrary depth.
+Tags can be nested to arbitrary depth.
 
 ### Tag content
 
-Angle brackets `< >` delimit tag content. The first version of the grammar treats content as a sequence of tokens; strings are the primary supported content form today. String contents are currently preserved as lexed text; escape sequences are not interpreted by the lexer yet.
+Angle brackets `< >` delimit tag content. The first version of the grammar treats content as a sequence of tokens; strings are the primary supported content form today.
 
 ```csam
 p
@@ -135,15 +142,21 @@ body
 }
 ```
 
-The parser validates the structure of a property but does not try to determine whether a CSS value is semantically valid. For example, it does not currently know whether a color, font, or CSS property is valid.
+Properties now pass their values through the semantic value parser. Simple values are represented by dedicated AST nodes, while syntax that has not yet received a semantic representation can remain a raw value.
 
-Property values are preserved as token sequences so values such as these work naturally:
+Examples:
 
 ```csam
-margin: 40px auto;
-font-family: Arial, sans-serif;
-background: mycolor;
+body
+{
+    margin: 40px auto;
+    opacity: 0.5;
+    width: 50%;
+    background: mycolor;
+}
 ```
+
+The parser does not currently determine whether a CSS property or CSS unit is valid. Semantic parsing describes the shape of the value; CSS validation will come later.
 
 ### Variables
 
@@ -153,13 +166,101 @@ Variables use a simple C-like declaration form:
 var mycolor = #8800ff;
 ```
 
-The parser currently treats the right-hand side as a token sequence and does not perform type checking or variable resolution.
+Variable values use the same semantic value parsing machinery as properties. Variable resolution, type checking, and semantic scope rules are not implemented yet.
 
-Variables are currently accepted inside parser blocks without imposing semantic scope rules. Those rules can be added later when semantic analysis exists.
+Variables are currently accepted wherever the grammar permits declarations without imposing a full semantic scope system.
+
+## Semantic values
+
+C SAM keeps the lexer granular and lets the parser construct semantic value nodes.
+
+For example:
+
+```text
+10
+```
+
+becomes a number value, while:
+
+```text
+10px
+```
+
+is lexed as:
+
+```text
+Number("10")
+Identifier("px")
+```
+
+and interpreted by the parser as a dimension value.
+
+The current semantic value layer contains:
+
+```text
+ValueNode
+├── NumberValueNode
+├── DimensionValueNode
+├── PercentageValueNode
+├── StringValueNode
+└── RawValueNode
+```
+
+The separation is intentional:
+
+```text
+characters → tokens → semantic values → AST
+```
+
+The lexer recognizes lexical units; the parser decides when those tokens form a meaningful CSS-oriented value.
+
+Numeric text is currently preserved rather than immediately converted to a floating-point type. This avoids unnecessary loss of source representation and leaves numeric validation/normalization decisions for later compiler stages.
+
+A dimension requires the number and unit to be adjacent in the source. For example:
+
+```csam
+width: 10px;
+```
+
+is a dimension, while:
+
+```csam
+width: 10 px;
+```
+
+is not combined into a dimension merely because whitespace tokens are omitted.
+
+## Functions and nested values
+
+The parser now has the foundation for semantic function values and nested argument collections.
+
+A function is recognized when an identifier is immediately followed by `(`:
+
+```csam
+width: calc(100% - 20px);
+```
+
+Function arguments are represented as collections of semantic values, with comma-separated arguments kept distinct. Nested functions can therefore be represented recursively.
+
+Whitespace matters for function recognition:
+
+```text
+calc(100%)
+```
+
+is function syntax, while:
+
+```text
+calc (100%)
+```
+
+does not become a function solely because the identifier and parenthesis appear next to each other in the token stream.
+
+Function parsing is still an early-stage implementation. CSS-specific functions such as `calc()`, `var()`, color functions, URLs, and gradients are not individually validated yet.
 
 ## Basic grammar
 
-The current parser is intentionally a basic grammar checker rather than a semantic analyzer.
+The current parser is intentionally a basic grammar checker with an emerging semantic value layer.
 
 Conceptually:
 
@@ -190,7 +291,7 @@ content
     -> < content_tokens >
 
 value
-    -> token*
+    -> semantic_value*
 ```
 
 A tag name must be followed by `{` or `<`. A property name must be followed by `:`. This distinction is intentional: C SAM uses raw identifier names for tags while retaining familiar CSS punctuation for styling declarations.
@@ -201,7 +302,7 @@ The lexer is responsible for converting source characters into tokens. It recogn
 
 - Identifiers, including CSS-style custom-property names and Unicode identifiers
 - Strings
-- Numbers and percentages
+- Numbers, percentages, decimal forms, and exponent forms
 - Hash values
 - At-keywords
 - `:`, `;`, `,`, and `=`
@@ -210,6 +311,8 @@ The lexer is responsible for converting source characters into tokens. It recogn
 - CSS selector match operators such as `~=`, `|=`, `^=`, `$=`, `*=` and `||`
 - End-of-file
 - C-style line and block comments
+
+Malformed exponent forms are handled transactionally. For example, the incomplete exponent in `1e-` does not become part of the number; the lexer leaves the `e` available to be tokenized as an identifier and the `-` as a minus token.
 
 `<` and `>` have a single lexical identity as `LessThan` and `GreaterThan`. Their meaning is determined by parser context: HTML-style tag content uses them as delimiters, while CSS selector grammar can use `>` as a combinator and `<` as ordinary punctuation where applicable. The lexer does not maintain separate HTML and CSS token types for angle brackets.
 
@@ -225,9 +328,11 @@ column
 
 The lexer checks lexical constructs such as unterminated strings and unterminated block comments. It does not perform structural delimiter matching.
 
+Whitespace is intentionally not emitted as a token. The parser uses source locations when adjacency matters, such as deciding whether a number is directly followed by a unit or whether an identifier is immediately followed by `(` for function syntax.
+
 ## Parser
 
-The parser uses recursive-descent style parsing and is responsible for grammar and structure.
+The parser uses recursive-descent style parsing and is responsible for grammar, structure, and the first level of semantic value construction.
 
 It currently:
 
@@ -237,6 +342,9 @@ It currently:
 - Maintains a scope stack while parsing nested tags.
 - Checks matching `{}`, `[]`, and `()` delimiters.
 - Handles `<` and `>` according to the active grammar context rather than treating them as generic paired delimiters.
+- Parses simple numeric, dimension, percentage, and string values into semantic AST nodes.
+- Parses function calls into nested semantic value structures.
+- Preserves unsupported value syntax through raw value nodes rather than requiring every CSS construct to be modeled immediately.
 - Reports source-aware syntax errors.
 - Builds the AST while parsing.
 
@@ -246,7 +354,7 @@ The parser's scope stack is separate from delimiter validation. The delimiter st
 
 ## AST
 
-The first AST is intentionally small and structural. It currently contains:
+The AST now contains both structural document nodes and semantic value nodes:
 
 ```text
 ASTNode
@@ -255,6 +363,14 @@ ASTNode
 ├── ContentNode
 ├── PropertyNode
 └── VariableNode
+
+ValueNode
+├── NumberValueNode
+├── DimensionValueNode
+├── PercentageValueNode
+├── StringValueNode
+├── RawValueNode
+└── FunctionValueNode
 ```
 
 Every AST node stores a `SourceLocation` describing where the construct originated in the source.
@@ -264,6 +380,8 @@ The AST uses `std::unique_ptr` for ownership. The AST owns its nodes; the parser
 `RootNode` and `TagNode` each maintain one ordered child collection of `ASTNode` objects. This preserves the original sibling order between variables, properties, content, and nested tags instead of grouping those node types into separate lists.
 
 `TagNode` also keeps a non-owning pointer to its `ContentNode` for convenient access. The content node itself is owned by the tag's ordered child collection.
+
+Properties and variables now store semantic `ValueNode` objects rather than only raw token vectors. A raw fallback value is retained for constructs that have not yet received a dedicated semantic representation.
 
 Conceptually, a document such as:
 
@@ -277,25 +395,30 @@ Conceptually, a document such as:
         h1 <"Hello">
         {
             color: mycolor;
+            padding: 10px;
         }
     }
 }
 ```
 
-becomes:
+becomes structurally similar to:
 
 ```text
 Root
-├── Variable: mycolor = #8800ff
+├── Variable: mycolor
+│   └── Raw/semantic value: #8800ff
 └── Tag: header
     └── Tag: h1
         ├── Content: "Hello"
-        └── Property: color = mycolor
+        ├── Property: color
+        │   └── RawValue: mycolor
+        └── Property: padding
+            └── DimensionValue: 10px
 ```
 
-The AST preserves source order within each scope. Values and tag content remain token sequences at this stage rather than being interpreted semantically.
+The AST preserves source order within each scope. Semantic values are represented separately from the lexical token stream so future generators can operate on meaning rather than reconstructing the source token-by-token.
 
-The AST does not currently perform semantic analysis, CSS validation, HTML validation, variable resolution, or code generation.
+The AST does not currently perform CSS property validation, HTML validation, variable resolution, or final code generation.
 
 ## Debug mode
 
@@ -338,9 +461,50 @@ Currently supported flag:
 
 Invalid argument syntax and invalid flags produce non-zero exit codes.
 
-## Testing
+## Building and testing
 
-The repository now has an automated front-end test harness. The tests are organized by compiler stage:
+The Makefile provides separate build, test, cleanup, and convenience targets.
+
+Build the compiler:
+
+```text
+make
+```
+
+Run the test suite:
+
+```text
+make test
+```
+
+Remove compiler and test binaries:
+
+```text
+make clean
+```
+
+Clean first, then build and run the tests:
+
+```text
+make clean-test
+```
+
+Run the full development cycle used for the current debug fixture:
+
+```text
+make auto
+```
+
+The `auto` target performs:
+
+```text
+make clean
+make
+./csam -d test.csam
+make test
+```
+
+The repository has automated front-end tests organized by compiler stage:
 
 ```text
 Lexer tests
@@ -350,13 +514,7 @@ Parser tests
 AST tests
 ```
 
-Run the complete suite with:
-
-```text
-make test
-```
-
-The harness currently verifies the token stream, parser behavior, and AST construction. A successful run reports:
+A successful test run reports:
 
 ```text
 Running lexer tests...
@@ -368,7 +526,7 @@ AST tests: PASS
 All tests passed.
 ```
 
-`test.csam` remains the current valid grammar reference and should continue to evolve with the language design. `bad.csam` remains a deliberately malformed syntax fixture.
+`test.csam` remains the current valid grammar reference and integration fixture. `bad.csam` remains a deliberately malformed syntax fixture.
 
 The automated tests are the primary regression mechanism for the compiler front end; the fixtures remain useful as human-readable language examples and parser inputs.
 
@@ -382,17 +540,23 @@ The automated tests are the primary regression mechanism for the compiler front 
 6. **`<>` defines tag content.** This is distinct from CSS declarations and is intentionally extensible.
 7. **`:` belongs to declarations.** It separates a property name from its value.
 8. **`;` terminates declarations.** Properties and variables require it.
-9. **The lexer stays lexical.** It identifies tokens and validates lexical constructs but does not interpret grammar.
-10. **The parser owns grammar.** It validates structure, tracks nesting, and builds the AST.
+9. **The lexer stays lexical.** It identifies tokens and validates lexical constructs but does not interpret grammar or semantic values.
+10. **The parser owns grammar.** It validates structure, tracks nesting, and constructs semantic values.
 11. **Angle brackets are contextual.** `<` and `>` have one lexical representation; HTML and CSS grammar determine their meaning.
-12. **The AST stays structural.** Semantic validation and code generation come later.
-13. **The AST preserves source order.** Sibling declarations and tags remain in the order they appeared in the source.
-14. **Ownership stays explicit.** AST ownership uses `std::unique_ptr`; parser scope tracking is non-owning.
-15. **Filesystem handling stays platform-independent.** Compiler path operations use `std::filesystem::path` rather than hard-coded path separators.
-16. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
+12. **Semantic values belong in the AST.** Numbers, dimensions, percentages, strings, and functions are represented independently from raw tokens where the language has defined their meaning.
+13. **Raw fallbacks are intentional.** Unsupported CSS constructs should remain representable without forcing premature semantic modeling.
+14. **The AST preserves source order.** Sibling declarations and tags remain in the order they appeared in the source.
+15. **Ownership stays explicit.** AST ownership uses `std::unique_ptr`; parser scope tracking is non-owning.
+16. **Whitespace is not a semantic token.** The parser uses source locations when source adjacency affects interpretation.
+17. **Filesystem handling stays platform-independent.** Compiler path operations use `std::filesystem::path` rather than hard-coded path separators.
+18. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
+
+## Current status
+
+The lexer, parser, AST, and semantic value foundation are covered by automated tests. The current front end supports structural C SAM documents, CSS-style declarations, C-like variables, Unicode-aware lexical identifiers, CSS-oriented punctuation, semantic primitive values, and early function-value parsing.
+
+The compiler does not yet generate HTML or CSS. Semantic validation, richer selector parsing, complete CSS value validation, variable resolution, and code generation remain future work.
 
 ## Next stage
 
-The lexical, parsing, and first-AST foundations are now covered by automated tests. The next major compiler task is to formalize and implement CSS-compatible numeric lexing, including signs, decimal forms, exponents, percentages, malformed-number handling, and the interaction between numbers and surrounding CSS units/tokens.
-
-Semantic analysis and code generation will come later, after the front-end grammar is sufficiently stable.
+The next planned compiler work is to complete the value system around functions and collections, including robust handling of nested values, comma-separated lists, operators, and CSS function arguments. After that, the project can move into a dedicated selector AST and the first CSS generator.
