@@ -15,7 +15,7 @@ C SAM is designed to:
 - Preserve useful source locations throughout the compiler for clear diagnostics.
 - Keep compiler filesystem handling platform-independent by using the C++ standard filesystem library rather than hard-coded Unix or Windows path syntax.
 
-This repository is currently private and the language is still being designed. `test.csam` is the current de facto grammar reference.
+The language is still being designed. `test.csam` is the current de facto grammar reference.
 
 ## Current compiler pipeline
 
@@ -34,7 +34,7 @@ C SAM source
    AST
 ```
 
-The compiler is written in C++23 and is built with the project's Makefile.
+The compiler is written in C++23 and is built with the project's Makefile. The compiler's source-file path handling is platform-independent, but the current Makefile uses standard Unix shell commands; native Windows builds may therefore require an environment such as MSYS2 or Cygwin until a native Windows build path is added.
 
 ## Source layout
 
@@ -107,7 +107,7 @@ The word before `{` or `<` is the tag name. Tags can be nested to arbitrary dept
 
 ### Tag content
 
-Angle brackets `< >` delimit tag content. The first version of the grammar treats content as a sequence of tokens; strings are the primary supported content form today.
+Angle brackets `< >` delimit tag content. The first version of the grammar treats content as a sequence of tokens; strings are the primary supported content form today. String contents are currently preserved as lexed text; escape sequences are not interpreted by the lexer yet.
 
 ```csam
 p
@@ -349,7 +349,9 @@ Invalid argument syntax and invalid flags produce non-zero exit codes.
 - Unclosed tag blocks
 - Missing property or variable values
 
-The goal is to keep a good example and a bad example available while each grammar feature is developed.
+The current `bad.csam` exercises an invalid tag/block structure. It is intentionally minimal; more malformed cases should be added as parser tests are developed.
+
+The repository does not yet have an automated test suite. `test.csam` and `bad.csam` are currently grammar fixtures rather than a comprehensive automated test harness.
 
 ## Current design principles
 
