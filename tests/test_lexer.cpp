@@ -86,22 +86,22 @@ int main()
     }
 
     {
+        // CSS tokenization treats a sign directly preceding a number as part
+        // of that number. Therefore 1+2 is Number("1"), Number("+2"), not
+        // Number("1"), Plus("+"), Number("2").
         const auto tokens = lex("1+2 1-2 -1+2 10px,-20px");
         assert(tokens[0].type == TokenType::Number && tokens[0].value == "1");
-        assert(tokens[1].type == TokenType::Plus && tokens[1].value == "+");
-        assert(tokens[2].type == TokenType::Number && tokens[2].value == "2");
-        assert(tokens[3].type == TokenType::Number && tokens[3].value == "1");
-        assert(tokens[4].type == TokenType::Minus && tokens[4].value == "-");
-        assert(tokens[5].type == TokenType::Number && tokens[5].value == "2");
-        assert(tokens[6].type == TokenType::Number && tokens[6].value == "-1");
-        assert(tokens[7].type == TokenType::Plus && tokens[7].value == "+");
-        assert(tokens[8].type == TokenType::Number && tokens[8].value == "2");
-        assert(tokens[9].type == TokenType::Number && tokens[9].value == "10");
+        assert(tokens[1].type == TokenType::Number && tokens[1].value == "+2");
+        assert(tokens[2].type == TokenType::Number && tokens[2].value == "1");
+        assert(tokens[3].type == TokenType::Number && tokens[3].value == "-2");
+        assert(tokens[4].type == TokenType::Number && tokens[4].value == "-1");
+        assert(tokens[5].type == TokenType::Number && tokens[5].value == "+2");
+        assert(tokens[6].type == TokenType::Number && tokens[6].value == "10");
+        assert(tokens[7].type == TokenType::Identifier && tokens[7].value == "px");
+        assert(tokens[8].type == TokenType::Comma && tokens[8].value == ",");
+        assert(tokens[9].type == TokenType::Number && tokens[9].value == "-20");
         assert(tokens[10].type == TokenType::Identifier && tokens[10].value == "px");
-        assert(tokens[11].type == TokenType::Comma && tokens[11].value == ",");
-        assert(tokens[12].type == TokenType::Number && tokens[12].value == "-20");
-        assert(tokens[13].type == TokenType::Identifier && tokens[13].value == "px");
-        assert(tokens[14].type == TokenType::EndOfFile);
+        assert(tokens[11].type == TokenType::EndOfFile);
     }
 
     {
