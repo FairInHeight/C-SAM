@@ -15,7 +15,7 @@ int main()
 {
     {
         const auto tokens = lex("div { color: red; }");
-        assert(tokens.size() == 7);
+        assert(tokens.size() == 8);
         assert(tokens[0].type == TokenType::Identifier);
         assert(tokens[0].value == "div");
         assert(tokens[1].type == TokenType::LeftBrace);
@@ -26,6 +26,7 @@ int main()
         assert(tokens[4].value == "red");
         assert(tokens[5].type == TokenType::Semicolon);
         assert(tokens[6].type == TokenType::RightBrace);
+        assert(tokens[7].type == TokenType::EndOfFile);
     }
 
     {
@@ -35,6 +36,7 @@ int main()
         assert(tokens[2].value == "content");
         assert(tokens[4].type == TokenType::String);
         assert(tokens[4].value == "\"hello\"");
+        assert(tokens.back().type == TokenType::EndOfFile);
     }
 
     {
@@ -54,6 +56,7 @@ int main()
         assert(tokens[12].type == TokenType::Comma);
         assert(tokens[13].type == TokenType::Number);
         assert(tokens[13].value == "42.5");
+        assert(tokens[14].type == TokenType::EndOfFile);
     }
 
     {
@@ -62,6 +65,7 @@ int main()
         assert(tokens[0].location.column == 1);
         assert(tokens[1].location.line == 2);
         assert(tokens[1].location.column == 1);
+        assert(tokens.back().type == TokenType::EndOfFile);
     }
 
     return 0;
