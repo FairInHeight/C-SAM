@@ -30,6 +30,16 @@ StringValueNode::StringValueNode(const Token& token, std::string value)
 {
 }
 
+FunctionValueNode::FunctionValueNode(
+    const Token& token,
+    std::string name,
+    std::vector<Argument> arguments)
+    : ValueNode(ASTNodeType::FunctionValue, token),
+      function_name(std::move(name)),
+      argument_groups(std::move(arguments))
+{
+}
+
 RawValueNode::RawValueNode(const Token& token, std::string value)
     : ValueNode(ASTNodeType::RawValue, token),
       raw_value(std::move(value))
