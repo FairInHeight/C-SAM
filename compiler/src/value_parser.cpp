@@ -11,6 +11,10 @@ ValueParser::ValueParser(const std::vector<Token>& tokens, std::size_t& current)
 
 const Token& ValueParser::peek() const
 {
+    if (current >= tokens.size()) {
+        throw std::runtime_error("Parser: unexpected end of token stream");
+    }
+
     return tokens[current];
 }
 
@@ -25,7 +29,7 @@ const Token& ValueParser::advance()
 
 bool ValueParser::check(TokenType type) const
 {
-    return peek().type == type;
+    return current < tokens.size() && tokens[current].type == type;
 }
 
 const Token& ValueParser::consume(TokenType type, const char* message)
@@ -51,7 +55,9 @@ std::vector<std::unique_ptr<ValueNode>> ValueParser::parse_value()
 {
     std::vector<std::unique_ptr<ValueNode>> values;
 
-    while (!check(TokenType::Semicolon) && !check(TokenType::EndOfFile)) {
+    while (current < tokens.size() &&
+           !check(TokenType::Semicolon) &&
+           !check(TokenType::EndOfFile)) {
         values.push_back(parse_single_value());
     }
 
@@ -95,7 +101,9 @@ FunctionValueNode::Argument ValueParser::parse_function_argument()
 {
     FunctionValueNode::Argument values;
 
-    while (!check(TokenType::Comma) && !check(TokenType::RightParen)) {
+    while (current < tokens.size() &&
+           !check(TokenType::Comma) &&
+           !check(TokenType::RightParen)) {
         if (check(TokenType::EndOfFile) || check(TokenType::Semicolon)) {
             unexpected(peek(), "Expected ')' after function arguments");
         }
