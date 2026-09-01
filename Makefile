@@ -7,7 +7,8 @@ SRC = $(wildcard compiler/src/*.cpp)
 TEST_COMMON_SRC = compiler/src/lexer.cpp \
                   compiler/src/parser.cpp \
                   compiler/src/ast.cpp \
-                  compiler/src/debug.cpp
+                  compiler/src/debug.cpp \
+                  compiler/src/value.cpp
 
 LEXER_TEST = tests/test_lexer
 PARSER_TEST = tests/test_parser
