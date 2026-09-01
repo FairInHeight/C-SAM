@@ -3,7 +3,9 @@
 
 #include "ast.hpp"
 
+#include <memory>
 #include <string>
+#include <vector>
 
 class ValueNode : public ASTNode {
 public:
@@ -51,6 +53,23 @@ public:
 
 private:
     std::string string_value;
+};
+
+class FunctionValueNode final : public ValueNode {
+public:
+    using Argument = std::vector<std::unique_ptr<ValueNode>>;
+
+    FunctionValueNode(
+        const Token& token,
+        std::string name,
+        std::vector<Argument> arguments);
+
+    const std::string& name() const { return function_name; }
+    const std::vector<Argument>& arguments() const { return argument_groups; }
+
+private:
+    std::string function_name;
+    std::vector<Argument> argument_groups;
 };
 
 // Temporary lossless representation for value syntax that does not yet have
