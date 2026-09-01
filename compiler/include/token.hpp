@@ -53,7 +53,13 @@ enum class TokenType {
     SubstringMatch,
     Column,
 
-    EndOfFile
+    EndOfFile,
+
+    // Compatibility aliases. Angle brackets are represented by the
+    // contextual LessThan/GreaterThan tokens; these aliases can be removed
+    // once all downstream code has migrated to the canonical names.
+    LeftAngle = LessThan,
+    RightAngle = GreaterThan
 };
 
 inline const char* token_type_name(TokenType type)
