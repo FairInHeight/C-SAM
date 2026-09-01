@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-Lexer::Lexer(const std::string& source, const std::string& filepath)
+Lexer::Lexer(const std::string& source, const std::filesystem::path& filepath)
     : source(source), filepath(filepath)
 {
 }
@@ -15,7 +15,7 @@ Lexer::Lexer(const std::string& source, const std::string& filepath)
 std::vector<Token> Lexer::tokenize()
 {
     if (csam_debug) {
-        std::cout << "Lexer: Tokenizing " << filepath << '\n';
+        std::cout << "Lexer: Tokenizing " << filepath.string() << '\n';
     }
 
     std::vector<Token> tokens;
@@ -79,7 +79,7 @@ std::vector<Token> Lexer::tokenize()
 
             if (!closed) {
                 throw std::runtime_error(
-                    filepath + ":" + std::to_string(comment_line) + ":" +
+                    filepath.string() + ":" + std::to_string(comment_line) + ":" +
                     std::to_string(comment_column) + ": Unterminated comment"
                 );
             }
@@ -156,7 +156,7 @@ std::vector<Token> Lexer::tokenize()
 
             if (!closed) {
                 throw std::runtime_error(
-                    filepath + ":" + std::to_string(start_line) + ":" +
+                    filepath.string() + ":" + std::to_string(start_line) + ":" +
                     std::to_string(start_column) + ": Unterminated string"
                 );
             }
@@ -210,7 +210,7 @@ std::vector<Token> Lexer::tokenize()
             case ',': type = TokenType::Comma; break;
             default:
                 throw std::runtime_error(
-                    filepath + ":" + std::to_string(line) + ":" +
+                    filepath.string() + ":" + std::to_string(line) + ":" +
                     std::to_string(column) + ": Unexpected character"
                 );
         }
@@ -232,7 +232,7 @@ std::vector<Token> Lexer::tokenize()
     });
 
     if (csam_debug) {
-        std::cout << "Lexer: Finished tokenizing " << filepath << '\n';
+        std::cout << "Lexer: Finished tokenizing " << filepath.string() << '\n';
     }
 
     return tokens;
