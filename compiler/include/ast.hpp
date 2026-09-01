@@ -13,7 +13,11 @@ enum class ASTNodeType {
     Tag,
     Content,
     Property,
-    Variable
+    Variable,
+    NumberValue,
+    DimensionValue,
+    PercentageValue,
+    StringValue
 };
 
 class ASTNode {
