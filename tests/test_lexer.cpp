@@ -32,6 +32,8 @@ int main()
     {
         const auto tokens = lex("// comment\ndiv /* comment */ { content: \"hello\"; }");
         assert(tokens[0].value == "div");
+        assert(tokens[0].location.line == 2);
+        assert(tokens[0].location.column == 1);
         assert(tokens[1].type == TokenType::LeftBrace);
         assert(tokens[2].value == "content");
         assert(tokens[4].type == TokenType::String);
@@ -42,20 +44,20 @@ int main()
     {
         const auto tokens = lex("#id [x] (y) <z> = a, 42.5");
         assert(tokens[0].type == TokenType::Hash);
-        assert(tokens[1].type == TokenType::LeftBracket);
-        assert(tokens[2].type == TokenType::Identifier);
-        assert(tokens[3].type == TokenType::RightBracket);
-        assert(tokens[4].type == TokenType::LeftParen);
-        assert(tokens[5].type == TokenType::Identifier);
-        assert(tokens[6].type == TokenType::RightParen);
-        assert(tokens[7].type == TokenType::LessThan);
-        assert(tokens[8].type == TokenType::Identifier);
-        assert(tokens[9].type == TokenType::GreaterThan);
-        assert(tokens[10].type == TokenType::Equals);
-        assert(tokens[11].type == TokenType::Identifier);
-        assert(tokens[12].type == TokenType::Comma);
-        assert(tokens[13].type == TokenType::Number);
-        assert(tokens[13].value == "42.5");
+        assert(tokens[0].value == "#id");
+        assert(tokens[1].type == TokenType::LeftBracket && tokens[1].value == "[");
+        assert(tokens[2].type == TokenType::Identifier && tokens[2].value == "x");
+        assert(tokens[3].type == TokenType::RightBracket && tokens[3].value == "]");
+        assert(tokens[4].type == TokenType::LeftParen && tokens[4].value == "(");
+        assert(tokens[5].type == TokenType::Identifier && tokens[5].value == "y");
+        assert(tokens[6].type == TokenType::RightParen && tokens[6].value == ")");
+        assert(tokens[7].type == TokenType::LessThan && tokens[7].value == "<");
+        assert(tokens[8].type == TokenType::Identifier && tokens[8].value == "z");
+        assert(tokens[9].type == TokenType::GreaterThan && tokens[9].value == ">");
+        assert(tokens[10].type == TokenType::Equals && tokens[10].value == "=");
+        assert(tokens[11].type == TokenType::Identifier && tokens[11].value == "a");
+        assert(tokens[12].type == TokenType::Comma && tokens[12].value == ",");
+        assert(tokens[13].type == TokenType::Number && tokens[13].value == "42.5");
         assert(tokens[14].type == TokenType::EndOfFile);
     }
 
@@ -103,9 +105,8 @@ int main()
 
     {
         const auto tokens = lex(".foo .5 .5rem 1..2");
-        assert(tokens[0].type == TokenType::Dot);
-        assert(tokens[1].type == TokenType::Identifier);
-        assert(tokens[1].value == "foo");
+        assert(tokens[0].type == TokenType::Dot && tokens[0].value == ".");
+        assert(tokens[1].type == TokenType::Identifier && tokens[1].value == "foo");
         assert(tokens[2].type == TokenType::Number && tokens[2].value == ".5");
         assert(tokens[3].type == TokenType::Number && tokens[3].value == ".5");
         assert(tokens[4].type == TokenType::Identifier && tokens[4].value == "rem");
@@ -115,9 +116,6 @@ int main()
     }
 
     {
-        // An invalid exponent does not become part of the number. The
-        // remaining characters are then tokenized normally; '-' is allowed
-        // inside a CSS identifier, so e- remains one identifier token.
         const auto tokens = lex("1e 1e+ 1e- 1E 1E+ 1E-");
         assert(tokens[0].type == TokenType::Number && tokens[0].value == "1");
         assert(tokens[1].type == TokenType::Identifier && tokens[1].value == "e");
@@ -138,63 +136,53 @@ int main()
 
     {
         const auto tokens = lex("foo --primary-color café --тема");
-        assert(tokens[0].type == TokenType::Identifier);
-        assert(tokens[0].value == "foo");
-        assert(tokens[1].type == TokenType::Identifier);
-        assert(tokens[1].value == "--primary-color");
-        assert(tokens[2].type == TokenType::Identifier);
-        assert(tokens[2].value == "café");
-        assert(tokens[3].type == TokenType::Identifier);
-        assert(tokens[3].value == "--тема");
+        assert(tokens[0].type == TokenType::Identifier && tokens[0].value == "foo");
+        assert(tokens[1].type == TokenType::Identifier && tokens[1].value == "--primary-color");
+        assert(tokens[2].type == TokenType::Identifier && tokens[2].value == "café");
+        assert(tokens[3].type == TokenType::Identifier && tokens[3].value == "--тема");
         assert(tokens[4].type == TokenType::EndOfFile);
     }
 
     {
         const auto tokens = lex("'single' \"double\" \"escaped \\\" quote\"");
-        assert(tokens[0].type == TokenType::String);
-        assert(tokens[0].value == "'single'");
-        assert(tokens[1].type == TokenType::String);
-        assert(tokens[1].value == "\"double\"");
-        assert(tokens[2].type == TokenType::String);
-        assert(tokens[2].value == "\"escaped \\\" quote\"");
+        assert(tokens[0].type == TokenType::String && tokens[0].value == "'single'");
+        assert(tokens[1].type == TokenType::String && tokens[1].value == "\"double\"");
+        assert(tokens[2].type == TokenType::String && tokens[2].value == "\"escaped \\\" quote\"");
         assert(tokens[3].type == TokenType::EndOfFile);
     }
 
     {
         const auto tokens = lex("@media #foo\\+bar ~= |= ^= $= *= || & ! ? .foo .5");
-        assert(tokens[0].type == TokenType::AtKeyword);
-        assert(tokens[0].value == "@media");
-        assert(tokens[1].type == TokenType::Hash);
-        assert(tokens[1].value == "#foo\\+bar");
-        assert(tokens[2].type == TokenType::IncludesMatch);
-        assert(tokens[3].type == TokenType::DashMatch);
-        assert(tokens[4].type == TokenType::PrefixMatch);
-        assert(tokens[5].type == TokenType::SuffixMatch);
-        assert(tokens[6].type == TokenType::SubstringMatch);
-        assert(tokens[7].type == TokenType::Column);
-        assert(tokens[8].type == TokenType::Ampersand);
-        assert(tokens[9].type == TokenType::Bang);
-        assert(tokens[10].type == TokenType::QuestionMark);
-        assert(tokens[11].type == TokenType::Dot);
-        assert(tokens[12].type == TokenType::Identifier);
-        assert(tokens[13].type == TokenType::Number);
-        assert(tokens[13].value == ".5");
+        assert(tokens[0].type == TokenType::AtKeyword && tokens[0].value == "@media");
+        assert(tokens[1].type == TokenType::Hash && tokens[1].value == "#foo\\+bar");
+        assert(tokens[2].type == TokenType::IncludesMatch && tokens[2].value == "~=");
+        assert(tokens[3].type == TokenType::DashMatch && tokens[3].value == "|=");
+        assert(tokens[4].type == TokenType::PrefixMatch && tokens[4].value == "^=");
+        assert(tokens[5].type == TokenType::SuffixMatch && tokens[5].value == "$=");
+        assert(tokens[6].type == TokenType::SubstringMatch && tokens[6].value == "*=");
+        assert(tokens[7].type == TokenType::Column && tokens[7].value == "||");
+        assert(tokens[8].type == TokenType::Ampersand && tokens[8].value == "&");
+        assert(tokens[9].type == TokenType::Bang && tokens[9].value == "!");
+        assert(tokens[10].type == TokenType::QuestionMark && tokens[10].value == "?");
+        assert(tokens[11].type == TokenType::Dot && tokens[11].value == ".");
+        assert(tokens[12].type == TokenType::Identifier && tokens[12].value == "foo");
+        assert(tokens[13].type == TokenType::Number && tokens[13].value == ".5");
         assert(tokens[14].type == TokenType::EndOfFile);
     }
 
     {
-        const auto tokens = lex("+ - * / > < ~ | ^ $ \\\n");
-        assert(tokens[0].type == TokenType::Plus);
-        assert(tokens[1].type == TokenType::Minus);
-        assert(tokens[2].type == TokenType::Asterisk);
-        assert(tokens[3].type == TokenType::Slash);
-        assert(tokens[4].type == TokenType::GreaterThan);
-        assert(tokens[5].type == TokenType::LessThan);
-        assert(tokens[6].type == TokenType::Tilde);
-        assert(tokens[7].type == TokenType::Pipe);
-        assert(tokens[8].type == TokenType::Caret);
-        assert(tokens[9].type == TokenType::Dollar);
-        assert(tokens[10].type == TokenType::Backslash);
+        const auto tokens = lex("+ - * / > < ~ | ^ $ \\");
+        assert(tokens[0].type == TokenType::Plus && tokens[0].value == "+");
+        assert(tokens[1].type == TokenType::Minus && tokens[1].value == "-");
+        assert(tokens[2].type == TokenType::Asterisk && tokens[2].value == "*");
+        assert(tokens[3].type == TokenType::Slash && tokens[3].value == "/");
+        assert(tokens[4].type == TokenType::GreaterThan && tokens[4].value == ">");
+        assert(tokens[5].type == TokenType::LessThan && tokens[5].value == "<");
+        assert(tokens[6].type == TokenType::Tilde && tokens[6].value == "~");
+        assert(tokens[7].type == TokenType::Pipe && tokens[7].value == "|");
+        assert(tokens[8].type == TokenType::Caret && tokens[8].value == "^");
+        assert(tokens[9].type == TokenType::Dollar && tokens[9].value == "$");
+        assert(tokens[10].type == TokenType::Backslash && tokens[10].value == "\\");
         assert(tokens[11].type == TokenType::EndOfFile);
     }
 
