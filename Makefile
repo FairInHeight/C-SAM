@@ -14,7 +14,7 @@ LEXER_TEST = tests/test_lexer
 PARSER_TEST = tests/test_parser
 AST_TEST = tests/test_ast
 
-.PHONY: all test clean
+.PHONY: all test clean clean-test auto
 
 all: $(TARGET)
 
@@ -41,6 +41,14 @@ test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 	@./$(AST_TEST)
 	@echo "AST tests: PASS"
 	@echo "All tests passed."
+
+clean-test: clean
+	$(MAKE) test
+
+auto: clean
+	$(MAKE)
+	./$(TARGET) -d test.csam
+	$(MAKE) test
 
 clean:
 	rm -f $(TARGET) $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
