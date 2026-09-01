@@ -53,4 +53,17 @@ private:
     std::string string_value;
 };
 
+// Temporary lossless representation for value syntax that does not yet have
+// a dedicated semantic node. This lets the parser become semantic without
+// throwing away CSS constructs we have not modeled yet.
+class RawValueNode final : public ValueNode {
+public:
+    RawValueNode(const Token& token, std::string value);
+
+    const std::string& value() const { return raw_value; }
+
+private:
+    std::string raw_value;
+};
+
 #endif
