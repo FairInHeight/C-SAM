@@ -48,9 +48,9 @@ int main()
         assert(tokens[4].type == TokenType::LeftParen);
         assert(tokens[5].type == TokenType::Identifier);
         assert(tokens[6].type == TokenType::RightParen);
-        assert(tokens[7].type == TokenType::LeftAngle);
+        assert(tokens[7].type == TokenType::LessThan);
         assert(tokens[8].type == TokenType::Identifier);
-        assert(tokens[9].type == TokenType::RightAngle);
+        assert(tokens[9].type == TokenType::GreaterThan);
         assert(tokens[10].type == TokenType::Equals);
         assert(tokens[11].type == TokenType::Identifier);
         assert(tokens[12].type == TokenType::Comma);
