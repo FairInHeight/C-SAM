@@ -407,9 +407,77 @@ void Parser::parse_property()
     add_property(std::make_unique<PropertyNode>(property, std::move(value)));
 }
 
+std::unique_ptr<ValueNode> Parser::parse_function()
+{
+    const Token& name = consume(TokenType::Identifier, "Expected function name");
+    const Token& left_paren = consume(
+        TokenType::LeftParen,
+        "Expected '(' after function name"
+    );
+
+    std::vector<ValueNode::Argument> arguments;
+
+    if (check(TokenType::RightParen)) {
+        advance();
+        return std::make_unique<FunctionValueNode>(
+            name,
+            name.value,
+            std::move(arguments)
+        );
+    }
+
+    while (true) {
+        arguments.push_back(parse_function_argument());
+
+        if (check(TokenType::RightParen)) {
+            advance();
+            break;
+        }
+
+        consume(TokenType::Comma, "Expected ',' or ')' in function arguments");
+
+        if (check(TokenType::RightParen)) {
+            unexpected(peek(), "Expected function argument after ','");
+        }
+    }
+
+    (void)left_paren;
+    return std::make_unique<FunctionValueNode>(
+        name,
+        name.value,
+        std::move(arguments)
+    );
+}
+
+ValueNode::Argument Parser::parse_function_argument()
+{
+    ValueNode::Argument values;
+
+    while (!check(TokenType::Comma) && !check(TokenType::RightParen)) {
+        if (check(TokenType::EndOfFile) || check(TokenType::Semicolon)) {
+            unexpected(peek(), "Expected ')' after function arguments");
+        }
+
+        values.push_back(parse_single_value());
+    }
+
+    if (values.empty()) {
+        unexpected(peek(), "Expected function argument");
+    }
+
+    return values;
+}
+
 std::unique_ptr<ValueNode> Parser::parse_single_value()
 {
     const Token& token = peek();
+
+    if (token.type == TokenType::Identifier &&
+        current + 1 < tokens.size() &&
+        tokens[current + 1].type == TokenType::LeftParen &&
+        tokens_are_adjacent(token, tokens[current + 1])) {
+        return parse_function();
+    }
 
     switch (token.type) {
         case TokenType::Number: {
