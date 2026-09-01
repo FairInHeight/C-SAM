@@ -25,7 +25,9 @@ static void expect_parse_error(const std::string& source, const std::string& mes
     } catch (const std::runtime_error& error) {
         threw = true;
         const std::string text = error.what();
-        assert(text.find(message) != std::string::npos);
+        if (text.find(message) == std::string::npos) {
+            assert(false && "Parser error diagnostic did not match expected text");
+        }
     }
 
     assert(threw);
