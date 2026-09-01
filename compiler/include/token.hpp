@@ -2,10 +2,11 @@
 #define CSAM_TOKEN_HPP
 
 #include <cstddef>
+#include <filesystem>
 #include <string>
 
 struct SourceLocation {
-    std::string filepath;
+    std::filesystem::path filepath;
     std::size_t line;
     std::size_t column;
 };
