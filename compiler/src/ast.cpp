@@ -1,4 +1,5 @@
 #include "ast.hpp"
+#include "value.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -6,19 +7,56 @@
 
 namespace {
 
-std::string tokens_to_string(const std::vector<Token>& tokens)
+void print_value(const ValueNode& node, std::size_t depth)
 {
-    std::ostringstream output;
+    const std::string indent(depth * 4, ' ');
 
-    for (std::size_t i = 0; i < tokens.size(); ++i) {
-        if (i != 0) {
-            output << ' ';
+    switch (node.type()) {
+        case ASTNodeType::NumberValue: {
+            const auto& value = static_cast<const NumberValueNode&>(node);
+            std::cout << indent << "Number: " << value.value() << '\n';
+            break;
         }
 
-        output << tokens[i].value;
-    }
+        case ASTNodeType::DimensionValue: {
+            const auto& value = static_cast<const DimensionValueNode&>(node);
+            std::cout << indent << "Dimension: "
+                      << value.number() << value.unit() << '\n';
+            break;
+        }
 
-    return output.str();
+        case ASTNodeType::PercentageValue: {
+            const auto& value = static_cast<const PercentageValueNode&>(node);
+            std::cout << indent << "Percentage: "
+                      << value.number() << "%\n";
+            break;
+        }
+
+        case ASTNodeType::StringValue: {
+            const auto& value = static_cast<const StringValueNode&>(node);
+            std::cout << indent << "String: " << value.value() << '\n';
+            break;
+        }
+
+        case ASTNodeType::RawValue: {
+            const auto& value = static_cast<const RawValueNode&>(node);
+            std::cout << indent << "Raw: " << value.value() << '\n';
+            break;
+        }
+
+        default:
+            std::cout << indent << "Value\n";
+            break;
+    }
+}
+
+void print_values(
+    const std::vector<std::unique_ptr<ValueNode>>& values,
+    std::size_t depth)
+{
+    for (const auto& value : values) {
+        print_value(*value, depth);
+    }
 }
 
 void print_node(const ASTNode& node, std::size_t depth)
@@ -45,24 +83,25 @@ void print_node(const ASTNode& node, std::size_t depth)
 
         case ASTNodeType::Content: {
             const auto& content = static_cast<const ContentNode&>(node);
-            std::cout << indent << "Content: "
-                      << tokens_to_string(content.tokens()) << '\n';
+            std::cout << indent << "Content:";
+            for (const auto& token : content.tokens()) {
+                std::cout << ' ' << token.value;
+            }
+            std::cout << '\n';
             break;
         }
 
         case ASTNodeType::Property: {
             const auto& property = static_cast<const PropertyNode&>(node);
-            std::cout << indent << "Property: "
-                      << property.name() << " = "
-                      << tokens_to_string(property.value()) << '\n';
+            std::cout << indent << "Property: " << property.name() << '\n';
+            print_values(property.value(), depth + 1);
             break;
         }
 
         case ASTNodeType::Variable: {
             const auto& variable = static_cast<const VariableNode&>(node);
-            std::cout << indent << "Variable: "
-                      << variable.name() << " = "
-                      << tokens_to_string(variable.value()) << '\n';
+            std::cout << indent << "Variable: " << variable.name() << '\n';
+            print_values(variable.value(), depth + 1);
             break;
         }
 
@@ -70,9 +109,8 @@ void print_node(const ASTNode& node, std::size_t depth)
         case ASTNodeType::DimensionValue:
         case ASTNodeType::PercentageValue:
         case ASTNodeType::StringValue:
-            // Value nodes are currently a semantic foundation. Their
-            // dedicated formatting will be added with value parsing.
-            std::cout << indent << "Value\n";
+        case ASTNodeType::RawValue:
+            print_value(static_cast<const ValueNode&>(node), depth);
             break;
     }
 }
@@ -95,19 +133,27 @@ void ContentNode::add_token(const Token& token)
     content_tokens.push_back(token);
 }
 
-PropertyNode::PropertyNode(const Token& name_token, std::vector<Token> value_tokens)
+PropertyNode::PropertyNode(
+    const Token& name_token,
+    std::vector<std::unique_ptr<ValueNode>> values)
     : ASTNode(ASTNodeType::Property, name_token),
       property_name(name_token.value),
-      value_tokens(std::move(value_tokens))
+      value_nodes(std::move(values))
 {
 }
 
-VariableNode::VariableNode(const Token& name_token, std::vector<Token> value_tokens)
+PropertyNode::~PropertyNode() = default;
+
+VariableNode::VariableNode(
+    const Token& name_token,
+    std::vector<std::unique_ptr<ValueNode>> values)
     : ASTNode(ASTNodeType::Variable, name_token),
       variable_name(name_token.value),
-      value_tokens(std::move(value_tokens))
+      value_nodes(std::move(values))
 {
 }
+
+VariableNode::~VariableNode() = default;
 
 TagNode::TagNode(const Token& name_token)
     : ASTNode(ASTNodeType::Tag, name_token),
