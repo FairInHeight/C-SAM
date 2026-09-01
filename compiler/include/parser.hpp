@@ -34,6 +34,8 @@ private:
     void parse_property();
     std::vector<std::unique_ptr<ValueNode>> parse_value(const char* context);
     std::unique_ptr<ValueNode> parse_single_value();
+    std::unique_ptr<ValueNode> parse_function();
+    ValueNode::Argument parse_function_argument();
 
     ASTNode* current_scope() const;
     void add_variable(std::unique_ptr<VariableNode> variable);
