@@ -206,7 +206,7 @@ int main()
     expect_parse_error(":root { div { color: red } }", "Expected ';' after property value");
     expect_parse_error(":root { var primary; }", "Expected variable, tag, or property in root block");
     expect_parse_error(":root { div { color: ; } }", "Expected value");
-    expect_parse_error(":root { div { color: rgb(255, 0, 0; } }", "unmatched opening delimiter");
+    expect_parse_error(":root { div { color: rgb(255, 0, 0; } }", "Unmatched '}'");
     expect_parse_error(":root { div { color: rgb(255, ); } }", "Expected function argument after ','");
     expect_parse_error(":root { div { color: rgb(, 255); } }", "Expected function argument");
     expect_parse_error(":root { div { color: rgb(255, 0, ); } }", "Expected function argument after ','");
