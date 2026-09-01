@@ -65,6 +65,15 @@ void print_node(const ASTNode& node, std::size_t depth)
                       << tokens_to_string(variable.value()) << '\n';
             break;
         }
+
+        case ASTNodeType::NumberValue:
+        case ASTNodeType::DimensionValue:
+        case ASTNodeType::PercentageValue:
+        case ASTNodeType::StringValue:
+            // Value nodes are currently a semantic foundation. Their
+            // dedicated formatting will be added with value parsing.
+            std::cout << indent << "Value\n";
+            break;
     }
 }
 
