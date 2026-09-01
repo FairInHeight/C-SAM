@@ -85,8 +85,8 @@ int main()
         assert(function.arguments().size() == 1);
         assert(function.arguments()[0].size() == 3);
         assert(function.arguments()[0][0]->type() == ASTNodeType::PercentageValue);
-        assert(function.arguments()[1][0]->type() == ASTNodeType::RawValue);
-        assert(function.arguments()[2][0]->type() == ASTNodeType::DimensionValue);
+        assert(function.arguments()[0][1]->type() == ASTNodeType::RawValue);
+        assert(function.arguments()[0][2]->type() == ASTNodeType::DimensionValue);
     }
 
     {
