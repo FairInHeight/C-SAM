@@ -120,7 +120,6 @@ std::unique_ptr<RootNode> Parser::parse()
         unexpected(peek(), "Expected ':root' block");
     }
 
-    // C-SAM's root declaration is written as :root { ... }.
     const Token& root_token = peek();
     if (!check(TokenType::Colon)) {
         unexpected(root_token, "Expected ':' before root name");
@@ -143,7 +142,15 @@ std::unique_ptr<RootNode> Parser::parse()
         }
 
         if (check(TokenType::Identifier)) {
-            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
+            const bool is_var_declaration =
+                peek().value == "var" &&
+                current + 2 < tokens.size() &&
+                tokens[current + 1].type == TokenType::Identifier &&
+                tokens[current + 2].type == TokenType::Equals;
+
+            if (is_var_declaration) {
+                parse_variable();
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
                 parse_variable();
             } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
                 parse_tag();
@@ -216,6 +223,12 @@ void Parser::parse_block()
 
 void Parser::parse_variable()
 {
+    if (check(TokenType::Identifier) && peek().value == "var" &&
+        current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Identifier &&
+        current + 2 < tokens.size() && tokens[current + 2].type == TokenType::Equals) {
+        advance();
+    }
+
     const Token& name = consume(TokenType::Identifier, "Expected variable name");
     consume(TokenType::Equals, "Expected '=' after variable name");
     auto value = parse_value("variable");
@@ -240,7 +253,15 @@ void Parser::parse_tag()
         }
 
         if (check(TokenType::Identifier)) {
-            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
+            const bool is_var_declaration =
+                peek().value == "var" &&
+                current + 2 < tokens.size() &&
+                tokens[current + 1].type == TokenType::Identifier &&
+                tokens[current + 2].type == TokenType::Equals;
+
+            if (is_var_declaration) {
+                parse_variable();
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
                 parse_variable();
             } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
                 parse_tag();
