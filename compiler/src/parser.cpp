@@ -36,7 +36,7 @@ char closing_delimiter(char opener)
 bool is_opener(TokenType type)
 {
     return type == TokenType::LeftBrace ||
-           type == TokenType::LeftAngle ||
+           type == TokenType::LessThan ||
            type == TokenType::LeftBracket ||
            type == TokenType::LeftParen;
 }
@@ -44,7 +44,7 @@ bool is_opener(TokenType type)
 bool is_closer(TokenType type)
 {
     return type == TokenType::RightBrace ||
-           type == TokenType::RightAngle ||
+           type == TokenType::GreaterThan ||
            type == TokenType::RightBracket ||
            type == TokenType::RightParen;
 }
@@ -210,7 +210,7 @@ void Parser::parse_block()
 
         const TokenType next = tokens[current + 1].type;
 
-        if (next == TokenType::LeftBrace || next == TokenType::LeftAngle) {
+        if (next == TokenType::LeftBrace || next == TokenType::LessThan) {
             parse_tag();
             continue;
         }
@@ -334,7 +334,7 @@ void Parser::parse_tag()
         return;
     }
 
-    if (check(TokenType::LeftAngle)) {
+    if (check(TokenType::LessThan)) {
         std::unique_ptr<ContentNode> content = parse_tag_content();
         tag->set_content(std::move(content));
 
@@ -359,19 +359,19 @@ void Parser::parse_tag()
 std::unique_ptr<ContentNode> Parser::parse_tag_content()
 {
     const Token& left_angle = consume(
-        TokenType::LeftAngle,
+        TokenType::LessThan,
         "Expected '<' for tag content"
     );
 
     auto content = std::make_unique<ContentNode>(left_angle);
 
-    if (check(TokenType::RightAngle)) {
+    if (check(TokenType::GreaterThan)) {
         throw std::runtime_error(
             location(peek()) + ": Expected content after '<'"
         );
     }
 
-    while (!check(TokenType::RightAngle)) {
+    while (!check(TokenType::GreaterThan)) {
         if (check(TokenType::EndOfFile)) {
             throw std::runtime_error(
                 location(peek()) + ": Expected '>' before end of file"
@@ -381,7 +381,7 @@ std::unique_ptr<ContentNode> Parser::parse_tag_content()
         content->add_token(advance());
     }
 
-    consume(TokenType::RightAngle, "Expected '>' after tag content");
+    consume(TokenType::GreaterThan, "Expected '>' after tag content");
     return content;
 }
 
