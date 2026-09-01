@@ -1,8 +1,8 @@
 # C SAM
 
-C SAM is a C++23 compiler project for a new web language that combines HTML-style document structure and CSS-style styling into a single source file.
+C SAM is a C++23 compiler project for a new web language that combines HTML-style document structure and CSS styling into a single source file.
 
-The project is intentionally being built in small compiler stages. The current compiler can tokenize C SAM, validate its basic grammar, and construct a first AST.
+The project is intentionally being built in small compiler stages. The current compiler can tokenize C SAM, validate its basic grammar, and construct an AST.
 
 ## Project goals
 
