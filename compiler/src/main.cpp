@@ -23,11 +23,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    for (const std::string& filepath : arguments.filepaths) {
+    for (const std::filesystem::path& filepath : arguments.filepaths) {
         std::ifstream file(filepath);
 
         if (!file) {
-            std::cerr << "Could not open " << filepath << '\n';
+            std::cerr << "Could not open " << filepath.string() << '\n';
             return 1;
         }
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
         if (csam_debug) {
             for (const Token& token : tokens) {
                 std::cout
-                    << token.location.filepath << ":"
+                    << token.location.filepath.string() << ":"
                     << token.location.line << ":"
                     << token.location.column << " "
                     << token_type_name(token.type);
