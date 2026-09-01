@@ -7,7 +7,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <string>
 #include <vector>
 
 class Parser {
@@ -25,6 +24,7 @@ private:
     const Token& advance();
     bool check(TokenType type) const;
     const Token& consume(TokenType type, const char* message);
+    [[noreturn]] void unexpected(const Token& token, const char* message) const;
 
     void validate_delimiters() const;
     void parse_block();
