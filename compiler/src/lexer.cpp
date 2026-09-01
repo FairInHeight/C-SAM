@@ -509,8 +509,8 @@ std::vector<Token> Lexer::tokenize()
                 case ';': type = TokenType::Semicolon; break;
                 case '{': type = TokenType::LeftBrace; break;
                 case '}': type = TokenType::RightBrace; break;
-                case '<': type = TokenType::LeftAngle; break;
-                case '>': type = TokenType::RightAngle; break;
+                case '<': type = TokenType::LessThan; break;
+                case '>': type = TokenType::GreaterThan; break;
                 case '[': type = TokenType::LeftBracket; break;
                 case ']': type = TokenType::RightBracket; break;
                 case '(': type = TokenType::LeftParen; break;

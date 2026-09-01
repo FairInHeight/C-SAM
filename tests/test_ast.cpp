@@ -46,7 +46,7 @@ int main()
         assert(tag->children().empty());
 
         auto content = std::make_unique<ContentNode>(
-            token(TokenType::LeftAngle, "<"));
+            token(TokenType::LessThan, "<"));
         assert(content->tokens().empty());
 
         content->add_token(token(TokenType::Identifier, "hello"));
