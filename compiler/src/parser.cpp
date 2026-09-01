@@ -304,7 +304,7 @@ void Parser::parse_variable()
     );
 
     consume(TokenType::Equals, "Expected '=' after variable name");
-    std::vector<Token> value = parse_value("variable declaration");
+    auto value = parse_value("variable declaration");
     consume(TokenType::Semicolon, "Expected ';' after variable declaration");
 
     add_variable(std::make_unique<VariableNode>(name, std::move(value)));
@@ -394,13 +394,58 @@ void Parser::parse_property()
     }
 
     consume(TokenType::Colon, "Expected ':' after property name");
-    std::vector<Token> value = parse_value("property");
+    auto value = parse_value("property");
     consume(TokenType::Semicolon, "Expected ';' after property value");
 
     add_property(std::make_unique<PropertyNode>(property, std::move(value)));
 }
 
-std::vector<Token> Parser::parse_value(const char* context)
+std::unique_ptr<ValueNode> Parser::parse_single_value()
+{
+    const Token& token = peek();
+
+    switch (token.type) {
+        case TokenType::Number: {
+            const Token& number = advance();
+
+            // Number + identifier is a CSS dimension, e.g. 10px or 1.5rem.
+            if (check(TokenType::Identifier)) {
+                const Token& unit = advance();
+                return std::make_unique<DimensionValueNode>(
+                    number,
+                    number.value,
+                    unit.value
+                );
+            }
+
+            // Number + percent is a CSS percentage value.
+            if (check(TokenType::Percent)) {
+                advance();
+                return std::make_unique<PercentageValueNode>(
+                    number,
+                    number.value
+                );
+            }
+
+            return std::make_unique<NumberValueNode>(number, number.value);
+        }
+
+        case TokenType::String: {
+            const Token& string = advance();
+            return std::make_unique<StringValueNode>(string, string.value);
+        }
+
+        default: {
+            // Preserve syntax that does not yet have a dedicated semantic
+            // value node. This keeps the parser lossless while the value
+            // grammar grows.
+            const Token& raw = advance();
+            return std::make_unique<RawValueNode>(raw, raw.value);
+        }
+    }
+}
+
+std::vector<std::unique_ptr<ValueNode>> Parser::parse_value(const char* context)
 {
     if (check(TokenType::Semicolon)) {
         throw std::runtime_error(
@@ -408,7 +453,7 @@ std::vector<Token> Parser::parse_value(const char* context)
         );
     }
 
-    std::vector<Token> value;
+    std::vector<std::unique_ptr<ValueNode>> values;
 
     while (!check(TokenType::Semicolon)) {
         if (check(TokenType::RightBrace) || check(TokenType::EndOfFile)) {
@@ -417,8 +462,8 @@ std::vector<Token> Parser::parse_value(const char* context)
             );
         }
 
-        value.push_back(advance());
+        values.push_back(parse_single_value());
     }
 
-    return value;
+    return values;
 }
