@@ -43,11 +43,10 @@ test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 	@echo "All tests passed."
 
 clean:
-	rm -f $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
+	rm -f $(TARGET) $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 
 auto:
 	$(MAKE) clean
-	rm -f $(TARGET)
 	$(MAKE)
 	./$(TARGET) -d test.csam
 	$(MAKE) test
