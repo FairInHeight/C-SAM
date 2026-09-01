@@ -146,14 +146,11 @@ int main()
         const auto& calc = static_cast<const FunctionValueNode&>(*width->value()[0]);
         assert(calc.name() == "calc");
         assert(calc.arguments().size() == 1);
-        assert(calc.arguments()[0].size() == 5);
+        assert(calc.arguments()[0].size() == 3);
         assert(calc.arguments()[0][0]->type() == ASTNodeType::PercentageValue);
         assert(calc.arguments()[0][1]->type() == ASTNodeType::RawValue);
-        assert(calc.arguments()[0][1]->value() == "-");
+        assert(static_cast<const RawValueNode&>(*calc.arguments()[0][1]).value() == "-");
         assert(calc.arguments()[0][2]->type() == ASTNodeType::DimensionValue);
-        assert(calc.arguments()[0][3]->type() == ASTNodeType::RawValue);
-        assert(calc.arguments()[0][3]->value() == "-");
-        assert(calc.arguments()[0][4]->type() == ASTNodeType::DimensionValue);
 
         auto* transform = dynamic_cast<PropertyNode*>(tag->children()[2].get());
         assert(transform != nullptr);
