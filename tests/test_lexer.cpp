@@ -86,9 +86,7 @@ int main()
     }
 
     {
-        // CSS tokenization treats a sign directly preceding a number as part
-        // of that number. Therefore 1+2 is Number("1"), Number("+2"), not
-        // Number("1"), Plus("+"), Number("2").
+        // A sign directly preceding a valid number is part of the CSS number.
         const auto tokens = lex("1+2 1-2 -1+2 10px,-20px");
         assert(tokens[0].type == TokenType::Number && tokens[0].value == "1");
         assert(tokens[1].type == TokenType::Number && tokens[1].value == "+2");
@@ -105,6 +103,8 @@ int main()
     }
 
     {
+        // CSS numbers may end in a decimal point; a following .2 starts
+        // another number because . followed by a digit starts a number.
         const auto tokens = lex(".foo .5 .5rem 1..2");
         assert(tokens[0].type == TokenType::Dot);
         assert(tokens[1].type == TokenType::Identifier);
@@ -113,12 +113,12 @@ int main()
         assert(tokens[3].type == TokenType::Number && tokens[3].value == ".5");
         assert(tokens[4].type == TokenType::Identifier && tokens[4].value == "rem");
         assert(tokens[5].type == TokenType::Number && tokens[5].value == "1.");
-        assert(tokens[6].type == TokenType::Dot);
-        assert(tokens[7].type == TokenType::Number && tokens[7].value == "2");
-        assert(tokens[8].type == TokenType::EndOfFile);
+        assert(tokens[6].type == TokenType::Number && tokens[6].value == ".2");
+        assert(tokens[7].type == TokenType::EndOfFile);
     }
 
     {
+        // An exponent is consumed only when it has at least one digit.
         const auto tokens = lex("1e 1e+ 1e- 1E 1E+ 1E-");
         assert(tokens[0].type == TokenType::Number && tokens[0].value == "1");
         assert(tokens[1].type == TokenType::Identifier && tokens[1].value == "e");
