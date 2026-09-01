@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 static std::unique_ptr<RootNode> parse(const std::string& source)
@@ -13,6 +14,21 @@ static std::unique_ptr<RootNode> parse(const std::string& source)
     const auto tokens = lexer.tokenize();
     Parser parser(tokens);
     return parser.parse();
+}
+
+static void expect_parse_error(const std::string& source, const std::string& message)
+{
+    bool threw = false;
+
+    try {
+        (void)parse(source);
+    } catch (const std::runtime_error& error) {
+        threw = true;
+        const std::string text = error.what();
+        assert(text.find(message) != std::string::npos);
+    }
+
+    assert(threw);
 }
 
 int main()
@@ -171,6 +187,22 @@ int main()
         assert(static_cast<const DimensionValueNode&>(*translate.arguments()[0][0]).unit() == "px");
         assert(static_cast<const DimensionValueNode&>(*translate.arguments()[1][0]).unit() == "px");
     }
+
+    // Error-path coverage: malformed structure and declarations must fail
+    // through the parser's normal runtime_error diagnostic path.
+    expect_parse_error("root { div {} }", "Expected ':' before root name");
+    expect_parse_error(":notroot { div {} }", "Expected root name 'root'");
+    expect_parse_error(":root { div {", "unmatched opening delimiter");
+    expect_parse_error(":root { div {} } }", "Unmatched '}'");
+    expect_parse_error(":root { div { color red; } }", "Expected ':' after property name");
+    expect_parse_error(":root { div { color: red } }", "Expected ';' after property value");
+    expect_parse_error(":root { var primary; }", "Expected '=' after variable name");
+    expect_parse_error(":root { div { color: ; } }", "Expected value");
+    expect_parse_error(":root { div { color: rgb(255, 0, 0; } }", "unmatched opening delimiter");
+    expect_parse_error(":root { div { color: rgb(255, ); } }", "Expected function argument after ','");
+    expect_parse_error(":root { div { color: rgb(, 255); } }", "Expected function argument");
+    expect_parse_error(":root { div { color: rgb(255, 0, ); } }", "Expected function argument after ','");
+    expect_parse_error(":root { div { color: rgb(255, 0, 0); } } trailing", "Unexpected token after root block");
 
     return 0;
 }
