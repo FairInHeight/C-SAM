@@ -4,6 +4,7 @@
 #include "value.hpp"
 
 #include <cassert>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -26,11 +27,20 @@ static void expect_parse_error(const std::string& source, const std::string& mes
         threw = true;
         const std::string text = error.what();
         if (text.find(message) == std::string::npos) {
-            assert(false && "Parser error diagnostic did not match expected text");
+            std::cerr << "Parser negative test diagnostic mismatch\n"
+                      << "  Source:   " << source << '\n'
+                      << "  Expected: " << message << '\n'
+                      << "  Actual:   " << text << '\n';
+            throw std::runtime_error("Parser negative test diagnostic mismatch");
         }
     }
 
-    assert(threw);
+    if (!threw) {
+        std::cerr << "Parser negative test expected an error but parsing succeeded\n"
+                  << "  Source:   " << source << '\n'
+                  << "  Expected: " << message << '\n';
+        throw std::runtime_error("Parser negative test expected an error");
+    }
 }
 
 int main()
