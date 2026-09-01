@@ -14,7 +14,7 @@ LEXER_TEST = tests/test_lexer
 PARSER_TEST = tests/test_parser
 AST_TEST = tests/test_ast
 
-.PHONY: all test clean auto
+.PHONY: all test clean clean-test auto
 
 all: $(TARGET)
 
@@ -41,6 +41,9 @@ test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 	@./$(AST_TEST)
 	@echo "AST tests: PASS"
 	@echo "All tests passed."
+
+clean-test:
+	rm -f $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 
 clean:
 	rm -f $(TARGET) $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
