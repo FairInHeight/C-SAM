@@ -1,5 +1,6 @@
 #include "ast.hpp"
 #include "token.hpp"
+#include "value.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -90,6 +91,36 @@ int main()
         assert(property.value()[0].value == "10");
         assert(property.value()[1].value == "px");
         assert(property.value()[2].value == "auto");
+    }
+
+    {
+        const Token number = token(TokenType::Number, "10.5");
+        NumberValueNode value(number, "10.5");
+        assert(value.type() == ASTNodeType::NumberValue);
+        assert(value.value() == "10.5");
+        assert(value.location().line == 1);
+    }
+
+    {
+        const Token number = token(TokenType::Number, "10");
+        DimensionValueNode value(number, "10", "px");
+        assert(value.type() == ASTNodeType::DimensionValue);
+        assert(value.number() == "10");
+        assert(value.unit() == "px");
+    }
+
+    {
+        const Token number = token(TokenType::Number, "50");
+        PercentageValueNode value(number, "50");
+        assert(value.type() == ASTNodeType::PercentageValue);
+        assert(value.number() == "50");
+    }
+
+    {
+        const Token string = token(TokenType::String, "\"hello\"");
+        StringValueNode value(string, "\"hello\"");
+        assert(value.type() == ASTNodeType::StringValue);
+        assert(value.value() == "\"hello\"");
     }
 
     return 0;
