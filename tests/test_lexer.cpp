@@ -132,7 +132,9 @@ int main()
     }
 
     {
-        const auto tokens = lex("+ - * / > < ~ | ^ $ \\ ");
+        // A backslash followed by a newline is not a CSS escape and should
+        // remain available as the standalone Backslash token.
+        const auto tokens = lex("+ - * / > < ~ | ^ $ \\\n");
         assert(tokens[0].type == TokenType::Plus);
         assert(tokens[1].type == TokenType::Minus);
         assert(tokens[2].type == TokenType::Asterisk);
