@@ -1,49 +1,49 @@
 #include "ast.hpp"
-#include "parser.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 
 #include <cassert>
+#include <memory>
 #include <string>
 
-static Parser parse(const std::string& source)
+static std::unique_ptr<RootNode> parse(const std::string& source)
 {
     Lexer lexer(source, "test.csam");
-    return Parser(lexer.tokenize());
+    const auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    return parser.parse();
 }
 
 int main()
 {
     {
-        auto parser = parse("div { color: red; }");
-        auto root = parser.parse();
+        auto root = parse(":root { div { color: red; } }");
         assert(root != nullptr);
-        assert(root->children.size() == 1);
-        assert(root->children[0]->type == ASTNodeType::Tag);
+        assert(root->children().size() == 1);
+        assert(root->children()[0]->type() == ASTNodeType::Tag);
     }
 
     {
-        auto parser = parse("div <hello>");
-        auto root = parser.parse();
-        assert(root->children.size() == 1);
-        auto* tag = dynamic_cast<TagNode*>(root->children[0].get());
+        auto root = parse(":root { div <hello> }");
+        assert(root->children().size() == 1);
+        auto* tag = dynamic_cast<TagNode*>(root->children()[0].get());
         assert(tag != nullptr);
-        assert(tag->children.size() == 1);
-        assert(tag->children[0]->type == ASTNodeType::Content);
+        assert(tag->content() != nullptr);
+        assert(tag->content()->tokens().size() == 1);
+        assert(tag->content()->tokens()[0].value == "hello");
     }
 
     {
-        auto parser = parse("var: primary = red;");
-        auto root = parser.parse();
-        assert(root->children.size() == 1);
-        assert(root->children[0]->type == ASTNodeType::Variable);
+        auto root = parse(":root { var primary = red; }");
+        assert(root->children().size() == 1);
+        assert(root->children()[0]->type() == ASTNodeType::Variable);
     }
 
     {
-        auto parser = parse("div {}\nspan <>");
-        auto root = parser.parse();
-        assert(root->children.size() == 2);
-        assert(root->children[0]->type == ASTNodeType::Tag);
-        assert(root->children[1]->type == ASTNodeType::Tag);
+        auto root = parse(":root { div {} span <hello> }");
+        assert(root->children().size() == 2);
+        assert(root->children()[0]->type() == ASTNodeType::Tag);
+        assert(root->children()[1]->type() == ASTNodeType::Tag);
     }
 
     return 0;
