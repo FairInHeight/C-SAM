@@ -2,20 +2,23 @@
 #include "token.hpp"
 
 #include <cassert>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
 
 static Token token(TokenType type, const std::string& value = "")
 {
-    return Token{type, value, {1, 1}};
+    return Token{type, value, {std::filesystem::path("test.csam"), 1, 1}};
 }
 
 int main()
 {
     {
-        auto root = std::make_unique<RootNode>(token(TokenType::Root, ":root"));
+        auto root = std::make_unique<RootNode>(token(TokenType::Identifier, ":root"));
         assert(root->type() == ASTNodeType::Root);
+        assert(root->location().line == 1);
+        assert(root->location().column == 1);
         assert(root->children().empty());
 
         root->add_property(std::make_unique<PropertyNode>(
