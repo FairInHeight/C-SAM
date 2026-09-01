@@ -54,8 +54,11 @@ The compiler is written in C++23 and is built with the project's Makefile. The c
 │       ├── debug.cpp
 │       ├── lexer.cpp
 │       ├── main.cpp
-│       ├── parser.cpp
-│       └── token.cpp
+│       └── parser.cpp
+├── tests
+│   ├── test_ast.cpp
+│   ├── test_lexer.cpp
+│   └── test_parser.cpp
 ├── test.csam
 ├── bad.csam
 ├── Makefile
@@ -194,22 +197,21 @@ A tag name must be followed by `{` or `<`. A property name must be followed by `
 
 ## Lexing
 
-The lexer is responsible for converting source characters into tokens. It recognizes:
+The lexer is responsible for converting source characters into tokens. It recognizes the current C SAM lexical vocabulary, including:
 
-- Identifiers
+- Identifiers, including CSS-style custom-property names and Unicode identifiers
 - Strings
-- Numbers
+- Numbers and percentages
 - Hash values
-- `:`
-- `;`
-- `{` and `}`
-- `<` and `>`
-- `[` and `]`
-- `(` and `)`
-- `=`
-- `,`
+- At-keywords
+- `:`, `;`, `,`, and `=`
+- `{}`, `[]`, and `()`
+- CSS-oriented punctuation such as `+`, `-`, `*`, `/`, `<`, `>`, `~`, `|`, `^`, `$`, `&`, `!`, `?`, `.`, and `\\`
+- CSS selector match operators such as `~=`, `|=`, `^=`, `$=`, `*=` and `||`
 - End-of-file
-- C/C++-style line and block comments
+- C-style line and block comments
+
+`<` and `>` have a single lexical identity as `LessThan` and `GreaterThan`. Their meaning is determined by parser context: HTML-style tag content uses them as delimiters, while CSS selector grammar can use `>` as a combinator and `<` as ordinary punctuation where applicable. The lexer does not maintain separate HTML and CSS token types for angle brackets.
 
 Tokens carry a shared `SourceLocation` containing:
 
@@ -233,7 +235,8 @@ It currently:
 - Parses variables, properties, tags, and tag content.
 - Supports arbitrary tag nesting.
 - Maintains a scope stack while parsing nested tags.
-- Checks matching `{}`, `<>`, `[]`, and `()` delimiters.
+- Checks matching `{}`, `[]`, and `()` delimiters.
+- Handles `<` and `>` according to the active grammar context rather than treating them as generic paired delimiters.
 - Reports source-aware syntax errors.
 - Builds the AST while parsing.
 
@@ -335,23 +338,39 @@ Currently supported flag:
 
 Invalid argument syntax and invalid flags produce non-zero exit codes.
 
-## Testing the grammar
+## Testing
 
-`test.csam` is the current valid grammar reference and should continue to evolve with the language design.
+The repository now has an automated front-end test harness. The tests are organized by compiler stage:
 
-`bad.csam` is reserved for deliberately malformed syntax. As the parser grows, it should accumulate representative failures such as:
+```text
+Lexer tests
+    ↓
+Parser tests
+    ↓
+AST tests
+```
 
-- Missing `:root`
-- Invalid tokens after a tag name
-- Missing `{`, `<`, `:`, or `;`
-- Unterminated strings
-- Unterminated or mismatched delimiters
-- Unclosed tag blocks
-- Missing property or variable values
+Run the complete suite with:
 
-The current `bad.csam` exercises an invalid tag/block structure. It is intentionally minimal; more malformed cases should be added as parser tests are developed.
+```text
+make test
+```
 
-The repository does not yet have an automated test suite. `test.csam` and `bad.csam` are currently grammar fixtures rather than a comprehensive automated test harness.
+The harness currently verifies the token stream, parser behavior, and AST construction. A successful run reports:
+
+```text
+Running lexer tests...
+Lexer tests: PASS
+Running parser tests...
+Parser tests: PASS
+Running AST tests...
+AST tests: PASS
+All tests passed.
+```
+
+`test.csam` remains the current valid grammar reference and should continue to evolve with the language design. `bad.csam` remains a deliberately malformed syntax fixture.
+
+The automated tests are the primary regression mechanism for the compiler front end; the fixtures remain useful as human-readable language examples and parser inputs.
 
 ## Current design principles
 
@@ -365,12 +384,15 @@ The repository does not yet have an automated test suite. `test.csam` and `bad.c
 8. **`;` terminates declarations.** Properties and variables require it.
 9. **The lexer stays lexical.** It identifies tokens and validates lexical constructs but does not interpret grammar.
 10. **The parser owns grammar.** It validates structure, tracks nesting, and builds the AST.
-11. **The AST stays structural.** Semantic validation and code generation come later.
-12. **The AST preserves source order.** Sibling declarations and tags remain in the order they appeared in the source.
-13. **Ownership stays explicit.** AST ownership uses `std::unique_ptr`; parser scope tracking is non-owning.
-14. **Filesystem handling stays platform-independent.** Compiler path operations use `std::filesystem::path` rather than hard-coded path separators.
-15. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
+11. **Angle brackets are contextual.** `<` and `>` have one lexical representation; HTML and CSS grammar determine their meaning.
+12. **The AST stays structural.** Semantic validation and code generation come later.
+13. **The AST preserves source order.** Sibling declarations and tags remain in the order they appeared in the source.
+14. **Ownership stays explicit.** AST ownership uses `std::unique_ptr`; parser scope tracking is non-owning.
+15. **Filesystem handling stays platform-independent.** Compiler path operations use `std::filesystem::path` rather than hard-coded path separators.
+16. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
 
 ## Next stage
 
-The first AST is now in place and has been cleaned up to preserve source order and consistent source locations. The next work should focus on testing the parser/AST thoroughly against valid and invalid syntax before expanding the language or beginning semantic analysis and code generation.
+The lexical, parsing, and first-AST foundations are now covered by automated tests. The next major compiler task is to formalize and implement CSS-compatible numeric lexing, including signs, decimal forms, exponents, percentages, malformed-number handling, and the interaction between numbers and surrounding CSS units/tokens.
+
+Semantic analysis and code generation will come later, after the front-end grammar is sufficiently stable.
