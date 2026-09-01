@@ -21,6 +21,7 @@ enum class ASTNodeType {
     DimensionValue,
     PercentageValue,
     StringValue,
+    FunctionValue,
     RawValue
 };
 
