@@ -1,8 +1,5 @@
 #include "parser.hpp"
 
-#include "debug.hpp"
-
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
@@ -40,6 +37,16 @@ const Token& Parser::consume(TokenType type, const char* message)
     unexpected(peek(), message);
 }
 
+[[noreturn]] void Parser::unexpected(const Token& token, const char* message) const
+{
+    std::ostringstream error;
+    error << "Parser: " << message
+          << " at " << token.location.filepath.string()
+          << ':' << token.location.line
+          << ':' << token.location.column;
+    throw std::runtime_error(error.str());
+}
+
 ASTNode* Parser::current_scope() const
 {
     return scope_stack.empty() ? nullptr : scope_stack.back();
@@ -59,11 +66,6 @@ void Parser::add_variable(std::unique_ptr<VariableNode> variable)
 
     if (auto* tag = dynamic_cast<TagNode*>(scope)) {
         tag->add_variable(std::move(variable));
-        return;
-    }
-
-    if (auto* content = dynamic_cast<ContentNode*>(scope)) {
-        content->add_variable(std::move(variable));
         return;
     }
 
@@ -87,11 +89,6 @@ void Parser::add_property(std::unique_ptr<PropertyNode> property)
         return;
     }
 
-    if (auto* content = dynamic_cast<ContentNode*>(scope)) {
-        content->add_property(std::move(property));
-        return;
-    }
-
     throw std::runtime_error("Parser: invalid scope for property");
 }
 
@@ -108,12 +105,7 @@ void Parser::add_tag(std::unique_ptr<TagNode> tag)
     }
 
     if (auto* parent = dynamic_cast<TagNode*>(scope)) {
-        parent->add_tag(std::move(tag));
-        return;
-    }
-
-    if (auto* content = dynamic_cast<ContentNode*>(scope)) {
-        content->add_tag(std::move(tag));
+        parent->add_child(std::move(tag));
         return;
     }
 
@@ -124,32 +116,53 @@ std::unique_ptr<RootNode> Parser::parse()
 {
     validate_delimiters();
 
-    const Token& root_token = tokens.front();
-    auto root = std::make_unique<RootNode>(root_token);
+    if (tokens.empty() || check(TokenType::EndOfFile)) {
+        unexpected(peek(), "Expected ':root' block");
+    }
 
+    // C-SAM's root declaration is written as :root { ... }.
+    const Token& root_token = peek();
+    if (!check(TokenType::Colon)) {
+        unexpected(root_token, "Expected ':' before root name");
+    }
+    advance();
+
+    const Token& root_name = consume(TokenType::Identifier, "Expected root name");
+    if (root_name.value != "root") {
+        unexpected(root_name, "Expected root name 'root'");
+    }
+
+    consume(TokenType::LeftBrace, "Expected '{' after root declaration");
+
+    auto root = std::make_unique<RootNode>(root_token);
     scope_stack.push_back(root.get());
-    while (!check(TokenType::EndOfFile)) {
-        if (check(TokenType::AtKeyword)) {
-            parse_block();
-        } else if (check(TokenType::Identifier)) {
-            if (current + 1 < tokens.size() &&
-                tokens[current + 1].type == TokenType::Equals) {
+
+    while (!check(TokenType::RightBrace)) {
+        if (check(TokenType::EndOfFile)) {
+            unexpected(peek(), "Expected '}' after root block");
+        }
+
+        if (check(TokenType::Identifier)) {
+            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
                 parse_variable();
-            } else if (current + 1 < tokens.size() &&
-                       tokens[current + 1].type == TokenType::LeftBrace) {
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
                 parse_tag();
-            } else if (current + 1 < tokens.size() &&
-                       tokens[current + 1].type == TokenType::Colon) {
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Colon) {
                 parse_property();
             } else {
-                unexpected(peek(), "Expected variable, tag, or property");
+                unexpected(peek(), "Expected variable, tag, or property in root block");
             }
         } else {
-            unexpected(peek(), "Unexpected token at top level");
+            unexpected(peek(), "Unexpected token in root block");
         }
     }
-    scope_stack.pop_back();
 
+    advance();
+    if (!check(TokenType::EndOfFile)) {
+        unexpected(peek(), "Unexpected token after root block");
+    }
+
+    scope_stack.pop_back();
     return root;
 }
 
@@ -198,43 +211,7 @@ void Parser::validate_delimiters() const
 
 void Parser::parse_block()
 {
-    const Token& at_keyword = advance();
-    const Token& left_brace = consume(TokenType::LeftBrace, "Expected '{' after at-keyword");
-    (void)left_brace;
-
-    auto block = std::make_unique<ContentNode>(at_keyword);
-    ContentNode* block_ptr = block.get();
-
-    ASTNode* scope = current_scope();
-    if (auto* root = dynamic_cast<RootNode*>(scope)) {
-        root->add_block(std::move(block));
-    } else {
-        throw std::runtime_error("Parser: invalid scope for block");
-    }
-
-    scope_stack.push_back(block_ptr);
-    while (!check(TokenType::RightBrace)) {
-        if (check(TokenType::EndOfFile)) {
-            unexpected(peek(), "Expected '}' after block");
-        }
-
-        if (check(TokenType::Identifier)) {
-            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
-                parse_variable();
-            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
-                parse_tag();
-            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Colon) {
-                parse_property();
-            } else {
-                unexpected(peek(), "Expected variable, tag, or property in block");
-            }
-        } else {
-            unexpected(peek(), "Unexpected token in block");
-        }
-    }
-
-    advance();
-    scope_stack.pop_back();
+    unexpected(peek(), "At-rules are not yet supported by the AST");
 }
 
 void Parser::parse_variable()
@@ -244,7 +221,7 @@ void Parser::parse_variable()
     auto value = parse_value("variable");
     consume(TokenType::Semicolon, "Expected ';' after variable value");
 
-    add_variable(std::make_unique<VariableNode>(name, name.value, std::move(value)));
+    add_variable(std::make_unique<VariableNode>(name, std::move(value)));
 }
 
 void Parser::parse_tag()
@@ -252,7 +229,7 @@ void Parser::parse_tag()
     const Token& name = consume(TokenType::Identifier, "Expected tag name");
     consume(TokenType::LeftBrace, "Expected '{' after tag name");
 
-    auto tag = std::make_unique<TagNode>(name, name.value);
+    auto tag = std::make_unique<TagNode>(name);
     TagNode* tag_ptr = tag.get();
     add_tag(std::move(tag));
 
@@ -272,9 +249,9 @@ void Parser::parse_tag()
             } else {
                 unexpected(peek(), "Expected variable, tag, or property in tag");
             }
-        } else if (check(TokenType::String)) {
+        } else if (check(TokenType::String) || check(TokenType::LessThan)) {
             auto content = parse_tag_content();
-            tag_ptr->add_content(std::move(content));
+            tag_ptr->set_content(std::move(content));
         } else {
             unexpected(peek(), "Unexpected token in tag");
         }
@@ -286,8 +263,18 @@ void Parser::parse_tag()
 
 std::unique_ptr<ContentNode> Parser::parse_tag_content()
 {
-    const Token& token = consume(TokenType::String, "Expected string content");
-    return std::make_unique<ContentNode>(token);
+    if (check(TokenType::String)) {
+        const Token& token = advance();
+        return std::make_unique<ContentNode>(token);
+    }
+
+    const Token& left = consume(TokenType::LessThan, "Expected '<' before tag content");
+    const Token& content = consume(TokenType::Identifier, "Expected tag content");
+    consume(TokenType::GreaterThan, "Expected '>' after tag content");
+
+    auto node = std::make_unique<ContentNode>(left);
+    node->add_token(content);
+    return node;
 }
 
 void Parser::parse_property()
@@ -325,11 +312,7 @@ std::unique_ptr<ValueNode> Parser::parse_function()
 
     if (check(TokenType::RightParen)) {
         advance();
-        return std::make_unique<FunctionValueNode>(
-            name,
-            name.value,
-            std::move(arguments)
-        );
+        return std::make_unique<FunctionValueNode>(name, name.value, std::move(arguments));
     }
 
     while (true) {
@@ -341,17 +324,12 @@ std::unique_ptr<ValueNode> Parser::parse_function()
         }
 
         consume(TokenType::Comma, "Expected ',' or ')' in function arguments");
-
         if (check(TokenType::RightParen)) {
             unexpected(peek(), "Expected function argument after ','");
         }
     }
 
-    return std::make_unique<FunctionValueNode>(
-        name,
-        name.value,
-        std::move(arguments)
-    );
+    return std::make_unique<FunctionValueNode>(name, name.value, std::move(arguments));
 }
 
 FunctionValueNode::Argument Parser::parse_function_argument()
@@ -379,7 +357,9 @@ std::unique_ptr<ValueNode> Parser::parse_single_value()
 
     if (token.type == TokenType::Identifier &&
         current + 1 < tokens.size() &&
-        tokens[current + 1].type == TokenType::LeftParen) {
+        tokens[current + 1].type == TokenType::LeftParen &&
+        token.location.line == tokens[current + 1].location.line &&
+        token.location.column + token.value.size() == tokens[current + 1].location.column) {
         return parse_function();
     }
 
@@ -387,12 +367,12 @@ std::unique_ptr<ValueNode> Parser::parse_single_value()
         const Token& number = advance();
 
         if (check(TokenType::Percent)) {
-            const Token& percent = advance();
+            const Token& percent = peek();
             if (number.location.line == percent.location.line &&
                 number.location.column + number.value.size() == percent.location.column) {
+                advance();
                 return std::make_unique<PercentageValueNode>(number, number.value);
             }
-            return std::make_unique<RawValueNode>(number, number.value);
         }
 
         if (check(TokenType::Identifier)) {
