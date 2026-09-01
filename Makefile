@@ -42,7 +42,8 @@ test: $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 	@echo "AST tests: PASS"
 	@echo "All tests passed."
 
-clean-test: clean
+clean-test:
+	rm -f $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 	$(MAKE) test
 
 auto: clean
