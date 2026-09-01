@@ -38,6 +38,19 @@ void print_value(const ValueNode& node, std::size_t depth)
             break;
         }
 
+        case ASTNodeType::FunctionValue: {
+            const auto& value = static_cast<const FunctionValueNode&>(node);
+            std::cout << indent << "Function: " << value.name() << '\n';
+
+            for (std::size_t i = 0; i < value.arguments().size(); ++i) {
+                std::cout << indent << "    Argument " << (i + 1) << ":\n";
+                for (const auto& argument_value : value.arguments()[i]) {
+                    print_value(*argument_value, depth + 2);
+                }
+            }
+            break;
+        }
+
         case ASTNodeType::RawValue: {
             const auto& value = static_cast<const RawValueNode&>(node);
             std::cout << indent << "Raw: " << value.value() << '\n';
@@ -109,6 +122,7 @@ void print_node(const ASTNode& node, std::size_t depth)
         case ASTNodeType::DimensionValue:
         case ASTNodeType::PercentageValue:
         case ASTNodeType::StringValue:
+        case ASTNodeType::FunctionValue:
         case ASTNodeType::RawValue:
             print_value(static_cast<const ValueNode&>(node), depth);
             break;
