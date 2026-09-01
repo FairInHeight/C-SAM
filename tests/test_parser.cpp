@@ -206,7 +206,7 @@ int main()
     expect_parse_error(":notroot { div {} }", "Expected root name 'root'");
     expect_parse_error(":root { div {", "unmatched opening delimiter");
     expect_parse_error(":root { div {} } }", "Unmatched '}'");
-    expect_parse_error(":root { div { color red; } }", "Expected ':' after property name");
+    expect_parse_error(":root { div { color red; } }", "Expected variable, tag, or property in tag");
     expect_parse_error(":root { div { color: red } }", "Expected ';' after property value");
     expect_parse_error(":root { var primary; }", "Expected '=' after variable name");
     expect_parse_error(":root { div { color: ; } }", "Expected value");
