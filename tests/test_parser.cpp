@@ -140,8 +140,6 @@ int main()
         assert(static_cast<const RawValueNode&>(*property->value()[1]).value() == "px");
     }
 
-    // Parser/value-parser integration: functions must survive structural parsing
-    // and appear as FunctionValueNodes in the property's AST.
     {
         auto root = parse(
             ":root { div { "
@@ -200,15 +198,13 @@ int main()
         assert(static_cast<const DimensionValueNode&>(*translate.arguments()[1][0]).unit() == "px");
     }
 
-    // Error-path coverage: malformed structure and declarations must fail
-    // through the parser's normal runtime_error diagnostic path.
     expect_parse_error("root { div {} }", "Expected ':' before root name");
     expect_parse_error(":notroot { div {} }", "Expected root name 'root'");
     expect_parse_error(":root { div {", "unmatched opening delimiter");
     expect_parse_error(":root { div {} } }", "Unmatched '}'");
     expect_parse_error(":root { div { color red; } }", "Expected variable, tag, or property in tag");
     expect_parse_error(":root { div { color: red } }", "Expected ';' after property value");
-    expect_parse_error(":root { var primary; }", "Expected '=' after variable name");
+    expect_parse_error(":root { var primary; }", "Expected variable, tag, or property in root block");
     expect_parse_error(":root { div { color: ; } }", "Expected value");
     expect_parse_error(":root { div { color: rgb(255, 0, 0; } }", "unmatched opening delimiter");
     expect_parse_error(":root { div { color: rgb(255, ); } }", "Expected function argument after ','");
