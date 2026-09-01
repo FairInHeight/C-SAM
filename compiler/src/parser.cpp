@@ -11,7 +11,7 @@ namespace {
 
 std::string location(const Token& token)
 {
-    return token.location.filepath + ":" +
+    return token.location.filepath.string() + ":" +
            std::to_string(token.location.line) + ":" +
            std::to_string(token.location.column);
 }
