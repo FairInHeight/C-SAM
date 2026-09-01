@@ -49,7 +49,7 @@ clean:
 	rm -f $(TARGET) $(LEXER_TEST) $(PARSER_TEST) $(AST_TEST)
 
 auto:
-	$(MAKE) clean
-	$(MAKE)
-	./$(TARGET) -d test.csam
+	$(MAKE) clean && \
+	$(MAKE) && \
+	./$(TARGET) -d test.csam && \
 	$(MAKE) test
