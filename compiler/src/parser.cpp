@@ -152,7 +152,9 @@ std::unique_ptr<RootNode> Parser::parse()
                 parse_variable();
             } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
                 parse_variable();
-            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
+            } else if (current + 1 < tokens.size() &&
+                       (tokens[current + 1].type == TokenType::LeftBrace ||
+                        tokens[current + 1].type == TokenType::LessThan)) {
                 parse_tag();
             } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Colon) {
                 parse_property();
@@ -240,13 +242,28 @@ void Parser::parse_variable()
 void Parser::parse_tag()
 {
     const Token& name = consume(TokenType::Identifier, "Expected tag name");
-    consume(TokenType::LeftBrace, "Expected '{' after tag name");
 
     auto tag = std::make_unique<TagNode>(name);
     TagNode* tag_ptr = tag.get();
     add_tag(std::move(tag));
 
     scope_stack.push_back(tag_ptr);
+
+    if (check(TokenType::LessThan)) {
+        tag_ptr->set_content(parse_tag_content());
+    }
+
+    if (!check(TokenType::LeftBrace)) {
+        if (check(TokenType::EndOfFile)) {
+            unexpected(peek(), "Expected '{' or tag content after tag name");
+        }
+
+        scope_stack.pop_back();
+        return;
+    }
+
+    advance();
+
     while (!check(TokenType::RightBrace)) {
         if (check(TokenType::EndOfFile)) {
             unexpected(peek(), "Expected '}' after tag");
@@ -263,16 +280,15 @@ void Parser::parse_tag()
                 parse_variable();
             } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
                 parse_variable();
-            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
+            } else if (current + 1 < tokens.size() &&
+                       (tokens[current + 1].type == TokenType::LeftBrace ||
+                        tokens[current + 1].type == TokenType::LessThan)) {
                 parse_tag();
             } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Colon) {
                 parse_property();
             } else {
                 unexpected(peek(), "Expected variable, tag, or property in tag");
             }
-        } else if (check(TokenType::String) || check(TokenType::LessThan)) {
-            auto content = parse_tag_content();
-            tag_ptr->set_content(std::move(content));
         } else {
             unexpected(peek(), "Unexpected token in tag");
         }
@@ -284,17 +300,18 @@ void Parser::parse_tag()
 
 std::unique_ptr<ContentNode> Parser::parse_tag_content()
 {
-    if (check(TokenType::String)) {
-        const Token& token = advance();
-        return std::make_unique<ContentNode>(token);
+    const Token& left = consume(TokenType::LessThan, "Expected '<' before tag content");
+    auto node = std::make_unique<ContentNode>(left);
+
+    while (!check(TokenType::GreaterThan)) {
+        if (check(TokenType::EndOfFile)) {
+            unexpected(peek(), "Expected '>' after tag content");
+        }
+
+        node->add_token(advance());
     }
 
-    const Token& left = consume(TokenType::LessThan, "Expected '<' before tag content");
-    const Token& content = consume(TokenType::Identifier, "Expected tag content");
     consume(TokenType::GreaterThan, "Expected '>' after tag content");
-
-    auto node = std::make_unique<ContentNode>(left);
-    node->add_token(content);
     return node;
 }
 
