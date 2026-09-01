@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 
+class ValueNode;
+
+// Semantic node kinds shared by the parser and output generators.
 enum class ASTNodeType {
     Root,
     Tag,
@@ -17,7 +20,8 @@ enum class ASTNodeType {
     NumberValue,
     DimensionValue,
     PercentageValue,
-    StringValue
+    StringValue,
+    RawValue
 };
 
 class ASTNode {
@@ -46,26 +50,28 @@ private:
 
 class PropertyNode final : public ASTNode {
 public:
-    PropertyNode(const Token& name_token, std::vector<Token> value_tokens);
+    PropertyNode(const Token& name_token, std::vector<std::unique_ptr<ValueNode>> values);
+    ~PropertyNode() override;
 
     const std::string& name() const { return property_name; }
-    const std::vector<Token>& value() const { return value_tokens; }
+    const std::vector<std::unique_ptr<ValueNode>>& value() const { return value_nodes; }
 
 private:
     std::string property_name;
-    std::vector<Token> value_tokens;
+    std::vector<std::unique_ptr<ValueNode>> value_nodes;
 };
 
 class VariableNode final : public ASTNode {
 public:
-    VariableNode(const Token& name_token, std::vector<Token> value_tokens);
+    VariableNode(const Token& name_token, std::vector<std::unique_ptr<ValueNode>> values);
+    ~VariableNode() override;
 
     const std::string& name() const { return variable_name; }
-    const std::vector<Token>& value() const { return value_tokens; }
+    const std::vector<std::unique_ptr<ValueNode>>& value() const { return value_nodes; }
 
 private:
     std::string variable_name;
-    std::vector<Token> value_tokens;
+    std::vector<std::unique_ptr<ValueNode>> value_nodes;
 };
 
 class TagNode final : public ASTNode {
