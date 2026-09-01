@@ -13,6 +13,7 @@ C SAM is designed to:
 - Provide a natural bridge from the C-family of languages into web development.
 - Keep the syntax small, predictable, and easy to parse.
 - Preserve useful source locations throughout the compiler for clear diagnostics.
+- Keep compiler filesystem handling platform-independent by using the C++ standard filesystem library rather than hard-coded Unix or Windows path syntax.
 
 This repository is currently private and the language is still being designed. `test.csam` is the current de facto grammar reference.
 
@@ -218,6 +219,8 @@ line
 column
 ```
 
+`filepath` is represented internally as `std::filesystem::path`, so compiler diagnostics and file access do not assume Unix `/` paths or Windows `\\` paths. The standard library handles native path representation for the host operating system.
+
 The lexer checks lexical constructs such as unterminated strings and unterminated block comments. It does not perform structural delimiter matching.
 
 ## Parser
@@ -363,7 +366,8 @@ The goal is to keep a good example and a bad example available while each gramma
 11. **The AST stays structural.** Semantic validation and code generation come later.
 12. **The AST preserves source order.** Sibling declarations and tags remain in the order they appeared in the source.
 13. **Ownership stays explicit.** AST ownership uses `std::unique_ptr`; parser scope tracking is non-owning.
-14. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
+14. **Filesystem handling stays platform-independent.** Compiler path operations use `std::filesystem::path` rather than hard-coded path separators.
+15. **Don't over-engineer early.** The first compiler stages should remain simple and easy to reason about.
 
 ## Next stage
 
