@@ -86,7 +86,6 @@ int main()
     }
 
     {
-        // A sign directly preceding a valid number is part of the CSS number.
         const auto tokens = lex("1+2 1-2 -1+2 10px,-20px");
         assert(tokens[0].type == TokenType::Number && tokens[0].value == "1");
         assert(tokens[1].type == TokenType::Number && tokens[1].value == "+2");
@@ -103,8 +102,6 @@ int main()
     }
 
     {
-        // CSS numbers may end in a decimal point; a following .2 starts
-        // another number because . followed by a digit starts a number.
         const auto tokens = lex(".foo .5 .5rem 1..2");
         assert(tokens[0].type == TokenType::Dot);
         assert(tokens[1].type == TokenType::Identifier);
@@ -118,25 +115,25 @@ int main()
     }
 
     {
-        // An exponent is consumed only when it has at least one digit.
+        // An invalid exponent does not become part of the number. The
+        // remaining characters are then tokenized normally; '-' is allowed
+        // inside a CSS identifier, so e- remains one identifier token.
         const auto tokens = lex("1e 1e+ 1e- 1E 1E+ 1E-");
         assert(tokens[0].type == TokenType::Number && tokens[0].value == "1");
         assert(tokens[1].type == TokenType::Identifier && tokens[1].value == "e");
         assert(tokens[2].type == TokenType::Number && tokens[2].value == "1");
         assert(tokens[3].type == TokenType::Identifier && tokens[3].value == "e");
-        assert(tokens[4].type == TokenType::Plus);
+        assert(tokens[4].type == TokenType::Plus && tokens[4].value == "+");
         assert(tokens[5].type == TokenType::Number && tokens[5].value == "1");
-        assert(tokens[6].type == TokenType::Identifier && tokens[6].value == "e");
-        assert(tokens[7].type == TokenType::Minus);
-        assert(tokens[8].type == TokenType::Number && tokens[8].value == "1");
-        assert(tokens[9].type == TokenType::Identifier && tokens[9].value == "E");
-        assert(tokens[10].type == TokenType::Number && tokens[10].value == "1");
-        assert(tokens[11].type == TokenType::Identifier && tokens[11].value == "E");
-        assert(tokens[12].type == TokenType::Plus);
-        assert(tokens[13].type == TokenType::Number && tokens[13].value == "1");
-        assert(tokens[14].type == TokenType::Identifier && tokens[14].value == "E");
-        assert(tokens[15].type == TokenType::Minus);
-        assert(tokens[16].type == TokenType::EndOfFile);
+        assert(tokens[6].type == TokenType::Identifier && tokens[6].value == "e-");
+        assert(tokens[7].type == TokenType::Number && tokens[7].value == "1");
+        assert(tokens[8].type == TokenType::Identifier && tokens[8].value == "E");
+        assert(tokens[9].type == TokenType::Number && tokens[9].value == "1");
+        assert(tokens[10].type == TokenType::Identifier && tokens[10].value == "E");
+        assert(tokens[11].type == TokenType::Plus && tokens[11].value == "+");
+        assert(tokens[12].type == TokenType::Number && tokens[12].value == "1");
+        assert(tokens[13].type == TokenType::Identifier && tokens[13].value == "E-");
+        assert(tokens[14].type == TokenType::EndOfFile);
     }
 
     {
