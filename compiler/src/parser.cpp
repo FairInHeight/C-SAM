@@ -51,6 +51,13 @@ char delimiter_char(const Token& token)
     return token.value.empty() ? '\0' : token.value[0];
 }
 
+bool tokens_are_adjacent(const Token& first, const Token& second)
+{
+    return first.location.line == second.location.line &&
+           second.location.column ==
+               first.location.column + first.value.size();
+}
+
 }
 
 Parser::Parser(const std::vector<Token>& tokens)
@@ -408,8 +415,11 @@ std::unique_ptr<ValueNode> Parser::parse_single_value()
         case TokenType::Number: {
             const Token& number = advance();
 
-            // Number + identifier is a CSS dimension, e.g. 10px or 1.5rem.
-            if (check(TokenType::Identifier)) {
+            // A unit must be immediately adjacent to the number. Whitespace
+            // is not represented by tokens, so source locations preserve the
+            // distinction between 10px and 10 px.
+            if (check(TokenType::Identifier) &&
+                tokens_are_adjacent(number, peek())) {
                 const Token& unit = advance();
                 return std::make_unique<DimensionValueNode>(
                     number,
@@ -418,8 +428,9 @@ std::unique_ptr<ValueNode> Parser::parse_single_value()
                 );
             }
 
-            // Number + percent is a CSS percentage value.
-            if (check(TokenType::Percent)) {
+            // The percent sign must likewise be adjacent to the number.
+            if (check(TokenType::Percent) &&
+                tokens_are_adjacent(number, peek())) {
                 advance();
                 return std::make_unique<PercentageValueNode>(
                     number,
