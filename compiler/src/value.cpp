@@ -29,3 +29,9 @@ StringValueNode::StringValueNode(const Token& token, std::string value)
       string_value(std::move(value))
 {
 }
+
+RawValueNode::RawValueNode(const Token& token, std::string value)
+    : ValueNode(ASTNodeType::RawValue, token),
+      raw_value(std::move(value))
+{
+}
