@@ -22,13 +22,19 @@ int main()
         assert(root->location().column == 1);
         assert(root->children().empty());
 
+        std::vector<std::unique_ptr<ValueNode>> property_values;
+        property_values.push_back(std::make_unique<RawValueNode>(
+            token(TokenType::Identifier, "red"), "red"));
         root->add_property(std::make_unique<PropertyNode>(
             token(TokenType::Identifier, "color"),
-            std::vector<Token>{token(TokenType::Identifier, "red")}));
+            std::move(property_values)));
 
+        std::vector<std::unique_ptr<ValueNode>> variable_values;
+        variable_values.push_back(std::make_unique<RawValueNode>(
+            token(TokenType::Identifier, "red"), "red"));
         root->add_variable(std::make_unique<VariableNode>(
             token(TokenType::Identifier, "primary"),
-            std::vector<Token>{token(TokenType::Identifier, "red")}));
+            std::move(variable_values)));
 
         root->add_tag(std::make_unique<TagNode>(
             token(TokenType::Identifier, "div")));
@@ -59,13 +65,19 @@ int main()
         assert(tag->content()->tokens()[0].value == "hello");
         assert(tag->content()->tokens()[1].value == "world");
 
+        std::vector<std::unique_ptr<ValueNode>> property_values;
+        property_values.push_back(std::make_unique<RawValueNode>(
+            token(TokenType::Identifier, "red"), "red"));
         tag->add_property(std::make_unique<PropertyNode>(
             token(TokenType::Identifier, "color"),
-            std::vector<Token>{token(TokenType::Identifier, "red")}));
+            std::move(property_values)));
 
+        std::vector<std::unique_ptr<ValueNode>> variable_values;
+        variable_values.push_back(std::make_unique<RawValueNode>(
+            token(TokenType::Identifier, "red"), "red"));
         tag->add_variable(std::make_unique<VariableNode>(
             token(TokenType::Identifier, "primary"),
-            std::vector<Token>{token(TokenType::Identifier, "red")}));
+            std::move(variable_values)));
 
         tag->add_child(std::make_unique<TagNode>(
             token(TokenType::Identifier, "span")));
@@ -78,19 +90,24 @@ int main()
     }
 
     {
+        std::vector<std::unique_ptr<ValueNode>> values;
+        values.push_back(std::make_unique<DimensionValueNode>(
+            token(TokenType::Number, "10"), "10", "px"));
+        values.push_back(std::make_unique<RawValueNode>(
+            token(TokenType::Identifier, "auto"), "auto"));
+
         PropertyNode property(
             token(TokenType::Identifier, "margin"),
-            std::vector<Token>{
-                token(TokenType::Number, "10"),
-                token(TokenType::Identifier, "px"),
-                token(TokenType::Identifier, "auto")});
+            std::move(values));
 
         assert(property.type() == ASTNodeType::Property);
         assert(property.name() == "margin");
-        assert(property.value().size() == 3);
-        assert(property.value()[0].value == "10");
-        assert(property.value()[1].value == "px");
-        assert(property.value()[2].value == "auto");
+        assert(property.value().size() == 2);
+        assert(property.value()[0]->type() == ASTNodeType::DimensionValue);
+        assert(static_cast<const DimensionValueNode&>(*property.value()[0]).number() == "10");
+        assert(static_cast<const DimensionValueNode&>(*property.value()[0]).unit() == "px");
+        assert(property.value()[1]->type() == ASTNodeType::RawValue);
+        assert(static_cast<const RawValueNode&>(*property.value()[1]).value() == "auto");
     }
 
     {
@@ -121,6 +138,13 @@ int main()
         StringValueNode value(string, "\"hello\"");
         assert(value.type() == ASTNodeType::StringValue);
         assert(value.value() == "\"hello\"");
+    }
+
+    {
+        const Token raw = token(TokenType::Identifier, "auto");
+        RawValueNode value(raw, "auto");
+        assert(value.type() == ASTNodeType::RawValue);
+        assert(value.value() == "auto");
     }
 
     return 0;
