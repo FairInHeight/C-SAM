@@ -1,64 +1,11 @@
 #include "parser.hpp"
+
 #include "debug.hpp"
 
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
-#include <string>
 #include <utility>
-#include <vector>
-
-namespace {
-
-std::string location(const Token& token)
-{
-    return token.location.filepath.string() + ":" +
-           std::to_string(token.location.line) + ":" +
-           std::to_string(token.location.column);
-}
-
-[[noreturn]] void unexpected(const Token& token, const std::string& message)
-{
-    throw std::runtime_error(location(token) + ": " + message +
-                             " (found '" + token.value + "')");
-}
-
-char closing_delimiter(char opener)
-{
-    switch (opener) {
-        case '{': return '}';
-        case '[': return ']';
-        case '(': return ')';
-        default: return '\0';
-    }
-}
-
-bool is_opener(TokenType type)
-{
-    return type == TokenType::LeftBrace ||
-           type == TokenType::LeftBracket ||
-           type == TokenType::LeftParen;
-}
-
-bool is_closer(TokenType type)
-{
-    return type == TokenType::RightBrace ||
-           type == TokenType::RightBracket ||
-           type == TokenType::RightParen;
-}
-
-char delimiter_char(const Token& token)
-{
-    return token.value.empty() ? '\0' : token.value[0];
-}
-
-bool tokens_are_adjacent(const Token& first, const Token& second)
-{
-    return first.location.line == second.location.line &&
-           second.location.column ==
-               first.location.column + first.value.size();
-}
-
-}
 
 Parser::Parser(const std::vector<Token>& tokens)
     : tokens(tokens)
@@ -72,7 +19,11 @@ const Token& Parser::peek() const
 
 const Token& Parser::advance()
 {
-    return tokens[current++];
+    if (current < tokens.size()) {
+        ++current;
+    }
+
+    return tokens[current - 1];
 }
 
 bool Parser::check(TokenType type) const
@@ -82,324 +33,266 @@ bool Parser::check(TokenType type) const
 
 const Token& Parser::consume(TokenType type, const char* message)
 {
-    if (!check(type)) {
-        const Token& token = peek();
-        throw std::runtime_error(location(token) + ": " + message +
-                                 " (found '" + token.value + "')");
+    if (check(type)) {
+        return advance();
     }
 
-    return advance();
-}
-
-void Parser::validate_delimiters() const
-{
-    std::vector<const Token*> delimiters;
-
-    for (const Token& token : tokens) {
-        if (is_opener(token.type)) {
-            delimiters.push_back(&token);
-            continue;
-        }
-
-        if (!is_closer(token.type)) {
-            continue;
-        }
-
-        if (delimiters.empty()) {
-            throw std::runtime_error(
-                location(token) + ": Unexpected closing delimiter '" +
-                std::string(1, delimiter_char(token)) + "'"
-            );
-        }
-
-        const Token& opener = *delimiters.back();
-        const char expected = closing_delimiter(delimiter_char(opener));
-        const char actual = delimiter_char(token);
-
-        if (actual != expected) {
-            throw std::runtime_error(
-                location(token) + ": Unexpected closing delimiter '" +
-                std::string(1, actual) + "'; expected '" +
-                std::string(1, expected) + "' for '" +
-                std::string(1, delimiter_char(opener)) + "' opened at " +
-                location(opener)
-            );
-        }
-
-        delimiters.pop_back();
-    }
-
-    if (!delimiters.empty()) {
-        const Token& opener = *delimiters.back();
-        throw std::runtime_error(
-            location(opener) + ": Unterminated delimiter '" +
-            std::string(1, delimiter_char(opener)) + "'; expected '" +
-            std::string(1, closing_delimiter(delimiter_char(opener))) + "'"
-        );
-    }
-}
-
-std::unique_ptr<RootNode> Parser::parse()
-{
-    if (csam_debug) {
-        std::cout << "Parser: Parsing source\n";
-    }
-
-    current = 0;
-    scope_stack.clear();
-
-    validate_delimiters();
-
-    if (check(TokenType::EndOfFile)) {
-        unexpected(peek(), "Expected ':root' at beginning of file");
-    }
-
-    consume(TokenType::Colon, "Expected ':root' at beginning of file");
-
-    const Token& root_token = consume(
-        TokenType::Identifier,
-        "Expected 'root' after ':'"
-    );
-
-    if (root_token.value != "root") {
-        throw std::runtime_error(location(root_token) + ": Expected ':root'");
-    }
-
-    auto root = std::make_unique<RootNode>(root_token);
-
-    consume(TokenType::LeftBrace, "Expected '{' after ':root'");
-
-    scope_stack.push_back(root.get());
-    parse_block();
-    scope_stack.pop_back();
-
-    consume(TokenType::EndOfFile, "Expected end of file");
-
-    if (!scope_stack.empty()) {
-        throw std::runtime_error(
-            location(peek()) + ": Unclosed scope"
-        );
-    }
-
-    if (csam_debug) {
-        std::cout << "Parser: Finished parsing source\n";
-    }
-
-    return root;
-}
-
-void Parser::parse_block()
-{
-    while (!check(TokenType::RightBrace)) {
-        if (check(TokenType::EndOfFile)) {
-            throw std::runtime_error(
-                location(peek()) + ": Expected '}' before end of file"
-            );
-        }
-
-        if (check(TokenType::Identifier) && peek().value == "var") {
-            parse_variable();
-            continue;
-        }
-
-        if (!check(TokenType::Identifier)) {
-            unexpected(peek(), "Expected tag, property, or variable declaration");
-        }
-
-        if (current + 1 >= tokens.size()) {
-            throw std::runtime_error(
-                location(peek()) + ": Expected '{' or '<' after tag name"
-            );
-        }
-
-        const TokenType next = tokens[current + 1].type;
-
-        if (next == TokenType::LeftBrace || next == TokenType::LessThan) {
-            parse_tag();
-            continue;
-        }
-
-        if (next == TokenType::Colon) {
-            parse_property();
-            continue;
-        }
-
-        throw std::runtime_error(
-            location(peek()) +
-            ": Expected '{' or '<' after tag name (or ':' for a property)"
-        );
-    }
-
-    consume(TokenType::RightBrace, "Expected '}' after block");
+    unexpected(peek(), message);
 }
 
 ASTNode* Parser::current_scope() const
 {
-    if (scope_stack.empty()) {
-        throw std::runtime_error("Parser: No active scope");
-    }
-
-    return scope_stack.back();
+    return scope_stack.empty() ? nullptr : scope_stack.back();
 }
 
 void Parser::add_variable(std::unique_ptr<VariableNode> variable)
 {
-    ASTNode* parent = current_scope();
+    ASTNode* scope = current_scope();
+    if (!scope) {
+        throw std::runtime_error("Parser: no active scope for variable");
+    }
 
-    if (parent->type() == ASTNodeType::Root) {
-        static_cast<RootNode*>(parent)->add_variable(std::move(variable));
+    if (auto* root = dynamic_cast<RootNode*>(scope)) {
+        root->add_variable(std::move(variable));
         return;
     }
 
-    if (parent->type() == ASTNodeType::Tag) {
-        static_cast<TagNode*>(parent)->add_variable(std::move(variable));
+    if (auto* tag = dynamic_cast<TagNode*>(scope)) {
+        tag->add_variable(std::move(variable));
         return;
     }
 
-    throw std::runtime_error("Parser: Invalid variable scope");
+    if (auto* content = dynamic_cast<ContentNode*>(scope)) {
+        content->add_variable(std::move(variable));
+        return;
+    }
+
+    throw std::runtime_error("Parser: invalid scope for variable");
 }
 
 void Parser::add_property(std::unique_ptr<PropertyNode> property)
 {
-    ASTNode* parent = current_scope();
+    ASTNode* scope = current_scope();
+    if (!scope) {
+        throw std::runtime_error("Parser: no active scope for property");
+    }
 
-    if (parent->type() == ASTNodeType::Root) {
-        static_cast<RootNode*>(parent)->add_property(std::move(property));
+    if (auto* root = dynamic_cast<RootNode*>(scope)) {
+        root->add_property(std::move(property));
         return;
     }
 
-    if (parent->type() == ASTNodeType::Tag) {
-        static_cast<TagNode*>(parent)->add_property(std::move(property));
+    if (auto* tag = dynamic_cast<TagNode*>(scope)) {
+        tag->add_property(std::move(property));
         return;
     }
 
-    throw std::runtime_error("Parser: Invalid property scope");
+    if (auto* content = dynamic_cast<ContentNode*>(scope)) {
+        content->add_property(std::move(property));
+        return;
+    }
+
+    throw std::runtime_error("Parser: invalid scope for property");
 }
 
 void Parser::add_tag(std::unique_ptr<TagNode> tag)
 {
-    ASTNode* parent = current_scope();
+    ASTNode* scope = current_scope();
+    if (!scope) {
+        throw std::runtime_error("Parser: no active scope for tag");
+    }
 
-    if (parent->type() == ASTNodeType::Root) {
-        static_cast<RootNode*>(parent)->add_tag(std::move(tag));
+    if (auto* root = dynamic_cast<RootNode*>(scope)) {
+        root->add_tag(std::move(tag));
         return;
     }
 
-    if (parent->type() == ASTNodeType::Tag) {
-        static_cast<TagNode*>(parent)->add_child(std::move(tag));
+    if (auto* parent = dynamic_cast<TagNode*>(scope)) {
+        parent->add_tag(std::move(tag));
         return;
     }
 
-    throw std::runtime_error("Parser: Invalid tag scope");
+    if (auto* content = dynamic_cast<ContentNode*>(scope)) {
+        content->add_tag(std::move(tag));
+        return;
+    }
+
+    throw std::runtime_error("Parser: invalid scope for tag");
+}
+
+std::unique_ptr<RootNode> Parser::parse()
+{
+    validate_delimiters();
+
+    const Token& root_token = tokens.front();
+    auto root = std::make_unique<RootNode>(root_token);
+
+    scope_stack.push_back(root.get());
+    while (!check(TokenType::EndOfFile)) {
+        if (check(TokenType::AtKeyword)) {
+            parse_block();
+        } else if (check(TokenType::Identifier)) {
+            if (current + 1 < tokens.size() &&
+                tokens[current + 1].type == TokenType::Equals) {
+                parse_variable();
+            } else if (current + 1 < tokens.size() &&
+                       tokens[current + 1].type == TokenType::LeftBrace) {
+                parse_tag();
+            } else if (current + 1 < tokens.size() &&
+                       tokens[current + 1].type == TokenType::Colon) {
+                parse_property();
+            } else {
+                unexpected(peek(), "Expected variable, tag, or property");
+            }
+        } else {
+            unexpected(peek(), "Unexpected token at top level");
+        }
+    }
+    scope_stack.pop_back();
+
+    return root;
+}
+
+void Parser::validate_delimiters() const
+{
+    std::vector<TokenType> stack;
+
+    for (const Token& token : tokens) {
+        switch (token.type) {
+        case TokenType::LeftBrace:
+        case TokenType::LeftBracket:
+        case TokenType::LeftParen:
+            stack.push_back(token.type);
+            break;
+
+        case TokenType::RightBrace:
+            if (stack.empty() || stack.back() != TokenType::LeftBrace) {
+                unexpected(token, "Unmatched '}'");
+            }
+            stack.pop_back();
+            break;
+
+        case TokenType::RightBracket:
+            if (stack.empty() || stack.back() != TokenType::LeftBracket) {
+                unexpected(token, "Unmatched ']'");
+            }
+            stack.pop_back();
+            break;
+
+        case TokenType::RightParen:
+            if (stack.empty() || stack.back() != TokenType::LeftParen) {
+                unexpected(token, "Unmatched ')'");
+            }
+            stack.pop_back();
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    if (!stack.empty()) {
+        throw std::runtime_error("Parser: unmatched opening delimiter");
+    }
+}
+
+void Parser::parse_block()
+{
+    const Token& at_keyword = advance();
+    const Token& left_brace = consume(TokenType::LeftBrace, "Expected '{' after at-keyword");
+    (void)left_brace;
+
+    auto block = std::make_unique<ContentNode>(at_keyword);
+    ContentNode* block_ptr = block.get();
+
+    ASTNode* scope = current_scope();
+    if (auto* root = dynamic_cast<RootNode*>(scope)) {
+        root->add_block(std::move(block));
+    } else {
+        throw std::runtime_error("Parser: invalid scope for block");
+    }
+
+    scope_stack.push_back(block_ptr);
+    while (!check(TokenType::RightBrace)) {
+        if (check(TokenType::EndOfFile)) {
+            unexpected(peek(), "Expected '}' after block");
+        }
+
+        if (check(TokenType::Identifier)) {
+            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
+                parse_variable();
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
+                parse_tag();
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Colon) {
+                parse_property();
+            } else {
+                unexpected(peek(), "Expected variable, tag, or property in block");
+            }
+        } else {
+            unexpected(peek(), "Unexpected token in block");
+        }
+    }
+
+    advance();
+    scope_stack.pop_back();
 }
 
 void Parser::parse_variable()
 {
-    if (csam_debug) {
-        std::cout << "Parser: Parsing variable declaration\n";
-    }
-
-    const Token& var = consume(TokenType::Identifier, "Expected 'var'");
-
-    if (var.value != "var") {
-        throw std::runtime_error(location(var) + ": Expected 'var'");
-    }
-
-    const Token& name = consume(
-        TokenType::Identifier,
-        "Expected variable name after 'var'"
-    );
-
+    const Token& name = consume(TokenType::Identifier, "Expected variable name");
     consume(TokenType::Equals, "Expected '=' after variable name");
-    auto value = parse_value("variable declaration");
-    consume(TokenType::Semicolon, "Expected ';' after variable declaration");
+    auto value = parse_value("variable");
+    consume(TokenType::Semicolon, "Expected ';' after variable value");
 
-    add_variable(std::make_unique<VariableNode>(name, std::move(value)));
+    add_variable(std::make_unique<VariableNode>(name, name.value, std::move(value)));
 }
 
 void Parser::parse_tag()
 {
-    const Token& tag_token = consume(TokenType::Identifier, "Expected tag name");
+    const Token& name = consume(TokenType::Identifier, "Expected tag name");
+    consume(TokenType::LeftBrace, "Expected '{' after tag name");
 
-    if (csam_debug) {
-        std::cout << "Parser: Parsing tag " << tag_token.value << '\n';
-    }
-
-    auto tag = std::make_unique<TagNode>(tag_token);
+    auto tag = std::make_unique<TagNode>(name, name.value);
     TagNode* tag_ptr = tag.get();
+    add_tag(std::move(tag));
 
-    if (check(TokenType::LeftBrace)) {
-        advance();
-        add_tag(std::move(tag));
-
-        scope_stack.push_back(tag_ptr);
-        parse_block();
-        scope_stack.pop_back();
-        return;
-    }
-
-    if (check(TokenType::LessThan)) {
-        std::unique_ptr<ContentNode> content = parse_tag_content();
-        tag->set_content(std::move(content));
-
-        const bool has_block = check(TokenType::LeftBrace);
-        add_tag(std::move(tag));
-
-        if (has_block) {
-            advance();
-            scope_stack.push_back(tag_ptr);
-            parse_block();
-            scope_stack.pop_back();
+    scope_stack.push_back(tag_ptr);
+    while (!check(TokenType::RightBrace)) {
+        if (check(TokenType::EndOfFile)) {
+            unexpected(peek(), "Expected '}' after tag");
         }
 
-        return;
+        if (check(TokenType::Identifier)) {
+            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Equals) {
+                parse_variable();
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LeftBrace) {
+                parse_tag();
+            } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::Colon) {
+                parse_property();
+            } else {
+                unexpected(peek(), "Expected variable, tag, or property in tag");
+            }
+        } else if (check(TokenType::String)) {
+            auto content = parse_tag_content();
+            tag_ptr->add_content(std::move(content));
+        } else {
+            unexpected(peek(), "Unexpected token in tag");
+        }
     }
 
-    throw std::runtime_error(
-        location(peek()) + ": Expected '{' or '<' after tag name"
-    );
+    advance();
+    scope_stack.pop_back();
 }
 
 std::unique_ptr<ContentNode> Parser::parse_tag_content()
 {
-    const Token& left_angle = consume(
-        TokenType::LessThan,
-        "Expected '<' for tag content"
-    );
-
-    auto content = std::make_unique<ContentNode>(left_angle);
-
-    if (check(TokenType::GreaterThan)) {
-        throw std::runtime_error(
-            location(peek()) + ": Expected content after '<'"
-        );
-    }
-
-    while (!check(TokenType::GreaterThan)) {
-        if (check(TokenType::EndOfFile)) {
-            throw std::runtime_error(
-                location(peek()) + ": Expected '>' before end of file"
-            );
-        }
-
-        content->add_token(advance());
-    }
-
-    consume(TokenType::GreaterThan, "Expected '>' after tag content");
-    return content;
+    const Token& token = consume(TokenType::String, "Expected string content");
+    return std::make_unique<ContentNode>(token);
 }
 
 void Parser::parse_property()
 {
-    const Token& property = consume(
-        TokenType::Identifier,
-        "Expected property name"
-    );
-
-    if (csam_debug) {
-        std::cout << "Parser: Parsing property " << property.value << '\n';
-    }
-
+    const Token& property = consume(TokenType::Identifier, "Expected property name");
     consume(TokenType::Colon, "Expected ':' after property name");
     auto value = parse_value("property");
     consume(TokenType::Semicolon, "Expected ';' after property value");
@@ -407,15 +300,28 @@ void Parser::parse_property()
     add_property(std::make_unique<PropertyNode>(property, std::move(value)));
 }
 
+std::vector<std::unique_ptr<ValueNode>> Parser::parse_value(const char* context)
+{
+    (void)context;
+    std::vector<std::unique_ptr<ValueNode>> values;
+
+    while (!check(TokenType::Semicolon) && !check(TokenType::EndOfFile)) {
+        values.push_back(parse_single_value());
+    }
+
+    if (values.empty()) {
+        unexpected(peek(), "Expected value");
+    }
+
+    return values;
+}
+
 std::unique_ptr<ValueNode> Parser::parse_function()
 {
     const Token& name = consume(TokenType::Identifier, "Expected function name");
-    const Token& left_paren = consume(
-        TokenType::LeftParen,
-        "Expected '(' after function name"
-    );
+    consume(TokenType::LeftParen, "Expected '(' after function name");
 
-    std::vector<ValueNode::Argument> arguments;
+    std::vector<FunctionValueNode::Argument> arguments;
 
     if (check(TokenType::RightParen)) {
         advance();
@@ -441,7 +347,6 @@ std::unique_ptr<ValueNode> Parser::parse_function()
         }
     }
 
-    (void)left_paren;
     return std::make_unique<FunctionValueNode>(
         name,
         name.value,
@@ -449,9 +354,9 @@ std::unique_ptr<ValueNode> Parser::parse_function()
     );
 }
 
-ValueNode::Argument Parser::parse_function_argument()
+FunctionValueNode::Argument Parser::parse_function_argument()
 {
-    ValueNode::Argument values;
+    FunctionValueNode::Argument values;
 
     while (!check(TokenType::Comma) && !check(TokenType::RightParen)) {
         if (check(TokenType::EndOfFile) || check(TokenType::Semicolon)) {
@@ -474,75 +379,37 @@ std::unique_ptr<ValueNode> Parser::parse_single_value()
 
     if (token.type == TokenType::Identifier &&
         current + 1 < tokens.size() &&
-        tokens[current + 1].type == TokenType::LeftParen &&
-        tokens_are_adjacent(token, tokens[current + 1])) {
+        tokens[current + 1].type == TokenType::LeftParen) {
         return parse_function();
     }
 
-    switch (token.type) {
-        case TokenType::Number: {
-            const Token& number = advance();
+    if (token.type == TokenType::Number) {
+        const Token& number = advance();
 
-            // A unit must be immediately adjacent to the number. Whitespace
-            // is not represented by tokens, so source locations preserve the
-            // distinction between 10px and 10 px.
-            if (check(TokenType::Identifier) &&
-                tokens_are_adjacent(number, peek())) {
-                const Token& unit = advance();
-                return std::make_unique<DimensionValueNode>(
-                    number,
-                    number.value,
-                    unit.value
-                );
+        if (check(TokenType::Percent)) {
+            const Token& percent = advance();
+            if (number.location.line == percent.location.line &&
+                number.location.column + number.value.size() == percent.location.column) {
+                return std::make_unique<PercentageValueNode>(number, number.value);
             }
+            return std::make_unique<RawValueNode>(number, number.value);
+        }
 
-            // The percent sign must likewise be adjacent to the number.
-            if (check(TokenType::Percent) &&
-                tokens_are_adjacent(number, peek())) {
+        if (check(TokenType::Identifier)) {
+            const Token& unit = peek();
+            if (number.location.line == unit.location.line &&
+                number.location.column + number.value.size() == unit.location.column) {
                 advance();
-                return std::make_unique<PercentageValueNode>(
-                    number,
-                    number.value
-                );
+                return std::make_unique<DimensionValueNode>(number, number.value, unit.value);
             }
-
-            return std::make_unique<NumberValueNode>(number, number.value);
         }
 
-        case TokenType::String: {
-            const Token& string = advance();
-            return std::make_unique<StringValueNode>(string, string.value);
-        }
-
-        default: {
-            // Preserve syntax that does not yet have a dedicated semantic
-            // value node. This keeps the parser lossless while the value
-            // grammar grows.
-            const Token& raw = advance();
-            return std::make_unique<RawValueNode>(raw, raw.value);
-        }
-    }
-}
-
-std::vector<std::unique_ptr<ValueNode>> Parser::parse_value(const char* context)
-{
-    if (check(TokenType::Semicolon)) {
-        throw std::runtime_error(
-            location(peek()) + ": Expected value in " + context
-        );
+        return std::make_unique<NumberValueNode>(number, number.value);
     }
 
-    std::vector<std::unique_ptr<ValueNode>> values;
-
-    while (!check(TokenType::Semicolon)) {
-        if (check(TokenType::RightBrace) || check(TokenType::EndOfFile)) {
-            throw std::runtime_error(
-                location(peek()) + ": Expected ';' after " + context
-            );
-        }
-
-        values.push_back(parse_single_value());
+    if (token.type == TokenType::String) {
+        return std::make_unique<StringValueNode>(advance(), token.value);
     }
 
-    return values;
+    return std::make_unique<RawValueNode>(advance(), token.value);
 }
