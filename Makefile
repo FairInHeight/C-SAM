@@ -8,7 +8,8 @@ TEST_COMMON_SRC = compiler/src/lexer.cpp \
                   compiler/src/parser.cpp \
                   compiler/src/ast.cpp \
                   compiler/src/debug.cpp \
-                  compiler/src/value.cpp
+                  compiler/src/value.cpp \
+                  compiler/src/value_parser.cpp
 
 LEXER_TEST = tests/test_lexer
 PARSER_TEST = tests/test_parser
