@@ -26,7 +26,6 @@ char closing_delimiter(char opener)
 {
     switch (opener) {
         case '{': return '}';
-        case '<': return '>';
         case '[': return ']';
         case '(': return ')';
         default: return '\0';
@@ -36,7 +35,6 @@ char closing_delimiter(char opener)
 bool is_opener(TokenType type)
 {
     return type == TokenType::LeftBrace ||
-           type == TokenType::LessThan ||
            type == TokenType::LeftBracket ||
            type == TokenType::LeftParen;
 }
@@ -44,7 +42,6 @@ bool is_opener(TokenType type)
 bool is_closer(TokenType type)
 {
     return type == TokenType::RightBrace ||
-           type == TokenType::GreaterThan ||
            type == TokenType::RightBracket ||
            type == TokenType::RightParen;
 }
